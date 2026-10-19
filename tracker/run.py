@@ -138,6 +138,7 @@ def main():
         jobs.append(("ioda", ioda.fetch, cfg.getint("ioda", "every_minutes")))
     if cfg.getboolean("adsb", "enabled"):
         jobs.append(("adsb", adsb.fetch, cfg.getint("adsb", "every_minutes")))
+        jobs.append(("airspace", adsb.fetch_regions, cfg.getint("adsb", "every_minutes")))
     if cfg.getboolean("seismic", "enabled"):
         jobs.append(("seismic", usgs.fetch, cfg.getint("seismic", "every_minutes")))
     if cfg.getboolean("firms", "enabled"):

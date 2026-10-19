@@ -162,11 +162,20 @@ def fetch():
     raw = get(f"{BASE}/mil", timeout=60)
     raws.append(raw)
     signals += military_signals(parse_aircraft(raw), now)
+    return b"\n".join(raws), signals
+
+
+def fetch_regions(deadline_s=150):
+    """Flashpoint regions, run as their own job so a slow region never holds up squawks."""
+    now, started = int(time.time()), time.time()
+    raws, signals, failed = [], [], []
     con = _db()
-    failed = []
     for name, (lat, lon) in REGIONS.items():
+        if time.time() - started > deadline_s:
+            failed.append(f"{name}: skipped, out of time")
+            continue
         try:
-            raw = get(f"{BASE}/point/{lat}/{lon}/{RADIUS_NM}", timeout=30)
+            raw = get(f"{BASE}/point/{lat}/{lon}/{RADIUS_NM}", timeout=20)
             raws.append(raw)
             signals += judge_region(name, lat, lon, parse_aircraft(raw), now, con)
         except Exception as e:   # one region failing shouldn't lose the rest
