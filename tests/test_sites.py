@@ -102,12 +102,12 @@ class LoneBaseFireTest(unittest.TestCase):
 
     def test_lone_fire_at_base_waits_for_a_second_source(self):
         from tracker import rules
-        self.assertEqual(rules.decide(self.big(), "36:-88", {}, self.site, set(), {"firms"})[0], "watch")
+        self.assertEqual(rules.decide(self.big(), "36:-88", {}, self.site, set(), [("gdelt", "News report: shooting (Nashville) https://x.com/nashville-shooting")])[0], "watch")
 
     def test_news_nearby_promotes_it(self):
         from tracker import rules
-        self.assertEqual(rules.decide(self.big(), "36:-88", {}, self.site, set(), {"firms", "gdelt"})[0], "signal")
+        self.assertEqual(rules.decide(self.big(), "36:-88", {}, self.site, set(), [("gdelt", "News report: fight https://globalnews.ca/fort-campbell-fire-crews")])[0], "signal")
 
     def test_conflict_zone_does_not_wait(self):
         from tracker import rules
-        self.assertEqual(rules.decide(self.big(), "51:36", {}, self.site, {"UA"}, {"firms"})[0], "signal")
+        self.assertEqual(rules.decide(self.big(), "51:36", {}, self.site, {"UA"}, [])[0], "signal")

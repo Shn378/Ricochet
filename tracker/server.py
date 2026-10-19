@@ -72,10 +72,10 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             cells[s["cell"]].append(s)
     expected, history = baseline.expectations(con, hours)
     hot_cc = hot_countries(con)
-    active = defaultdict(set)
+    texts = defaultdict(list)
     for c, its in cells.items():
         for s in its:
-            active[c].add(s["source"])
+            texts[c].append((s["source"], f"{s.get('title') or ''} {s.get('url') or ''}"))
     out = []
     for cell, items in cells.items():
         by_src = defaultdict(float)
@@ -93,7 +93,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             site = json.loads(s["extra"] or "{}").get("site") if isinstance(s["extra"], str) else (s["extra"] or {}).get("site")
             if site and s["source"] not in site_by:
                 site_by[s["source"]] = site
-        nearby = set().union(*(active.get(n, ()) for n in rules.neighbours(cell)))
+        nearby = [x for n in rules.neighbours(cell) for x in texts.get(n, ())]
         level, reason, site = rules.decide(feeds, cell, expected, site_by, hot_cc, nearby)
         hot = [s for s, f in feeds.items() if f["elevated"]]   # after decide: the site rule can lift a feed
         if debug is not None:

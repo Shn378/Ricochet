@@ -1,11 +1,13 @@
 """The hotspot decision, in one place, used by both the live globe and the replay tool,
 so a replayed incident is judged by exactly the rules that run live.
 """
+import re
+
 from . import baseline
 
-PHYSICAL = {"firms", "wiki"}
+PHYSICAL = {"firms", "wiki"}   # signals the sensitive-site rule can lift
 # Feeds that can corroborate a lone fire: someone, somewhere, is talking about it
-CORROBORATE = {"gdelt", "news", "wiki"}   # signals the sensitive-site rule can lift
+CORROBORATE = {"gdelt", "news", "wiki"}
 QUIET_SITE = 0.5    # expected score below this = "normally nothing happens here"
 # The smallest signal the quiet-site rule will lift. A 2-3 detection fire 10 km from a
 # range is usually a controlled burn; Wainwright was 8 detections (score 1.6).
@@ -51,12 +53,36 @@ def in_conflict(cell, expected, hot_countries=None):
     return bool(countries_near(cell) & hot_countries)
 
 
+GENERIC = set("""fort base army air force regional training area plant ammunition cfb raf naval
+station camp international airport military refinery nuclear power the of and joint field range
+depot barracks installation terminal lng parliament building national centre center county""".split())
+INCIDENT = re.compile(r"fire|blaze|explo|blast|smoke|burn|incident|attack|drone|strike|evacuat|emergenc|casualt|dead|killed|injur", re.I)
+
+
+def site_words(name):
+    """Distinctive words of a site's name: 'Fort Campbell' -> {'campbell'}."""
+    return {w for w in re.findall(r"[a-z]+", (name or "").lower()) if len(w) >= 4 and w not in GENERIC}
+
+
+def corroborated(site, nearby):
+    """Does any nearby report name this site and talk about an incident?
+    Plain news volume isn't enough: Fort Campbell sits next to Nashville."""
+    words = site_words(site.get("name"))
+    for src, text in nearby or ():
+        if src in CORROBORATE and text:
+            t = text.lower().replace("-", " ").replace("_", " ")
+            if any(w in t for w in words) and INCIDENT.search(t):
+                return True
+    return False
+
+
 def neighbours(cell, radius=1):
     la, lo = map(int, cell.split(":"))
     return [f"{la + a}:{lo + b}" for a in range(-radius, radius + 1) for b in range(-radius, radius + 1)]
 
 
 def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None, nearby=None):
+    """nearby: (source, title + url) pairs from the surrounding 3x3 squares."""
     """feeds: {source: {"z", "elevated", "baseline", ...}}; sites_by_source: {source: site dict}.
     Returns (level or None, reason, site or None)."""
     sites_by_source = sites_by_source or {}
@@ -73,9 +99,9 @@ def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None, near
     if at_site:
         site = sites_by_source[at_site[0]]
         # A lone fire at a base outside any conflict is usually a planned range burn (US bases
-        # in autumn). Hold it as "watch" until news, GDELT or Wikipedia nearby mentions anything.
+        # in autumn). Hold it as "watch" until a report nearby names the site and an incident.
         if len(feeds) == 1 and at_site[0] == "firms" and nearby is not None \
-                and not (set(nearby) & CORROBORATE) and not in_conflict(cell, expected, hot_countries):
+                and not corroborated(site, nearby) and not in_conflict(cell, expected, hot_countries):
             return "watch", f"fire at {site['name']} ({site['kind']}), waiting for a second source", site
         level = "reported" if len(feeds) >= 2 else "signal"
         return level, f"{at_site[0]} above normal at {site['name']} ({site['kind']})", site

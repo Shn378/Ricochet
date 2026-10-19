@@ -113,7 +113,7 @@ def simulate(series, cell, expected, history, steps, con=None):
                     if s.get("site"):
                         site_by.setdefault(src, s["site"])
         around = set(rules.neighbours(cell))
-        nearby = {src for src, sigs in series.items() for s in sigs if s["cell"] in around and t - 6 * 3600 < s["t"] <= t}
+        nearby = [(src, s.get("text", "")) for src, sigs in series.items() for s in sigs if s["cell"] in around and t - 6 * 3600 < s["t"] <= t]
         level, reason, site = rules.decide(feeds, cell, expected, site_by, None, nearby) if feeds else (None, None, None)
         timeline.append({"t": iso(t), "feeds": feeds, "level": level, "note": reason if not level else None, "reason": reason})
     return timeline
@@ -217,7 +217,8 @@ def run(lat, lon, start, end, wiki_titles=(), keywords=(), log=print, firms_key=
             report["notes"].append(f"FIRMS failed: {e}")
 
     # Step through the window with the live rules
-    series = {"gdelt": [{"t": f["slot"] + 15 * 60, "cell": f["cell"], "score": f["score"]} for f in found],
+    series = {"gdelt": [{"t": f["slot"] + 15 * 60, "cell": f["cell"], "score": f["score"],
+                         "text": f"{f.get('title', '')} {f.get('url', '')}"} for f in found],
               "wiki": wiki_series,
               "firms": [{"t": f["observed_at"] + 3 * 3600, "cell": db.cell_of(f["lat"], f["lon"]), "score": f["score"],
                          "site": f["extra"].get("site")} for f in fires]}
