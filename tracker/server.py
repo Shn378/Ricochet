@@ -40,6 +40,23 @@ def hotspots(con, hours=6, limit=40):
     return result
 
 
+def _situations(con):
+    hit = _cache.get("situations")
+    if not hit or time.time() - hit[0] > 300:
+        hit = (time.time(), situations.compute(con))
+        _cache["situations"] = hit
+    return hit[1]
+
+
+def hot_countries(con):
+    """ISO codes of countries with an ongoing or escalating situation."""
+    from .places import FIPS_TO_ISO
+    try:
+        return {FIPS_TO_ISO[c["country"]] for c in _situations(con)["countries"] if c["ongoing"] and c["country"] in FIPS_TO_ISO}
+    except Exception:
+        return None
+
+
 def _hotspots(con, hours=6, limit=40, debug=None):
     """Areas running above their normal level.
 
@@ -54,6 +71,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
         if s["kind"] not in PRESENCE_ONLY:
             cells[s["cell"]].append(s)
     expected, history = baseline.expectations(con, hours)
+    hot_cc = hot_countries(con)
     out = []
     for cell, items in cells.items():
         by_src = defaultdict(float)
@@ -72,7 +90,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             site = json.loads(s["extra"] or "{}").get("site") if isinstance(s["extra"], str) else (s["extra"] or {}).get("site")
             if site and s["source"] not in site_by:
                 site_by[s["source"]] = site
-        level, reason, site = rules.decide(feeds, cell, expected, site_by)
+        level, reason, site = rules.decide(feeds, cell, expected, site_by, hot_cc)
         if debug is not None:
             debug.append({"cell": cell, "feeds": feeds, "lat": items[0]["lat"], "lon": items[0]["lon"], "decision": level, "reason": reason,
                           "place": next((s["place"] for s in items if s.get("place")), None)})
@@ -163,11 +181,7 @@ class Handler(SimpleHTTPRequestHandler):
             if u.path == "/api/hotspots":
                 return self._json({"now": int(time.time()), "hotspots": hotspots(self.con, int(q.get("hours", 6)))})
             if u.path == "/api/situations":   # all=1 for the full country table (tuning)
-                hit = _cache.get("situations")
-                if not hit or time.time() - hit[0] > 300:
-                    hit = (time.time(), situations.compute(self.con))
-                    _cache["situations"] = hit
-                res = dict(hit[1])
+                res = dict(_situations(self.con))
                 if not q.get("all"):
                     res["countries"] = [c for c in res["countries"] if c["ongoing"]]
                 return self._json(res)

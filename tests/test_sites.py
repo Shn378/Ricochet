@@ -74,3 +74,13 @@ class WikiTiers(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FiresOnlyConflictTest(unittest.TestCase):
+    def test_fires_alone_need_an_ongoing_situation_nearby(self):
+        from tracker import rules
+        feeds = lambda: {"firms": {"observed": 40, "expected": 2, "z": 9, "elevated": True, "baseline": True}}
+        # Farm burning in Arkansas: big jump, but no conflict situation in the US
+        self.assertIsNone(rules.decide(feeds(), "35:-91", {}, {}, {"UA", "SD"})[0])
+        # Same jump near the Ukrainian border (Kursk) counts
+        self.assertEqual(rules.decide(feeds(), "51:36", {}, {}, {"UA", "SD"})[0], "signal")
