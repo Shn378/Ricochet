@@ -15,7 +15,7 @@ import traceback
 from datetime import datetime, timezone
 
 from . import baseline, db, sites
-from .collectors import adsb, firms, gdelt, ioda, usgs, wiki
+from .collectors import adsb, ais, firms, gdelt, ioda, radar, usgs, wiki
 from .server import serve
 
 CONFIG_PATH = os.path.join(db.ROOT, "config.ini")
@@ -26,6 +26,8 @@ DEFAULTS = {
     "ioda": {"enabled": "yes", "every_minutes": "10"},
     "adsb": {"enabled": "yes", "every_minutes": "5"},
     "seismic": {"enabled": "yes", "every_minutes": "5"},
+    "radar": {"enabled": "yes", "token": "", "every_minutes": "10"},
+    "ais": {"enabled": "yes", "key": ""},
     "wiki": {"enabled": "yes"},
     "news": {"enabled": "yes", "budget_per_min": "30", "quiet_minutes": "30", "hot_minutes": "2", "world_desk_minutes": "5"},
 }
@@ -85,6 +87,21 @@ def wiki_runner(con):
         log(f"[wiki] {msg}")
     db.log_run(con, "wiki", True, 0, "stream starting")
     wiki.stream(on_signal, on_error)
+
+
+def ais_runner(con, key):
+    def on_signals(sigs, raw):
+        snap, sha = db.save_snapshot("ais", raw)
+        added = db.add_signals(con, sigs, snap, sha)
+        for s in sigs[:added]:
+            log(f"[ais] {s['title']}")
+    def on_status(msg):
+        db.log_run(con, "ais", True, 0, msg)
+    def on_error(msg):
+        db.log_run(con, "ais", False, 0, msg)
+        log(f"[ais] {msg}")
+    db.log_run(con, "ais", True, 0, "stream starting")
+    ais.stream(key, on_signals, on_status, on_error)
 
 
 def housekeeping(con, keep_days):
@@ -151,6 +168,12 @@ def main():
             jobs.append(("firms", lambda: firms.fetch(key), cfg.getint("firms", "every_minutes")))
         else:
             log("[firms] skipped: add your free map key to config.ini to switch on heat detection")
+    if cfg.getboolean("radar", "enabled"):
+        token = cfg.get("radar", "token").strip()
+        if token:
+            jobs.append(("radar", lambda: radar.fetch(token), cfg.getint("radar", "every_minutes")))
+        else:
+            log("[radar] skipped: add a Cloudflare Radar read token to config.ini")
     sites.refresh(con, log)   # Wikidata list of sensitive sites, monthly
     baseline.prepare(con, ["gdelt", "ioda", "firms", "wiki", "adsb", "news"])
     key = cfg.get("firms", "map_key").strip() if cfg.getboolean("firms", "enabled") else None
@@ -160,6 +183,11 @@ def main():
         time.sleep(2)  # stagger first runs so the laptop isn't hit all at once
     if cfg.getboolean("wiki", "enabled"):
         threading.Thread(target=wiki_runner, args=(con,), daemon=True, name="wiki").start()
+    if cfg.getboolean("ais", "enabled"):
+        if cfg.get("ais", "key").strip():
+            threading.Thread(target=ais_runner, args=(con, cfg.get("ais", "key").strip()), daemon=True, name="ais").start()
+        else:
+            log("[ais] skipped: add an aisstream.io key to config.ini")
     if cfg.getboolean("news", "enabled"):
         from .attention import Budget
         threading.Thread(target=Budget(cfg, log).run, daemon=True, name="news").start()

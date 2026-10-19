@@ -75,3 +75,45 @@ class AirspaceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RadarTest(unittest.TestCase):
+    def test_outage_and_anomaly_parse(self):
+        from tracker.collectors import radar
+        outages = {"annotations": [{"id": "1", "locations": ["IR"], "startDate": "2026-10-19T18:00:00Z",
+                                    "outage": {"outageCause": "GOVERNMENT_DIRECTED", "outageType": "NATIONWIDE"},
+                                    "scope": "Nationwide", "description": "Shutdown during protests"}]}
+        anomalies = {"trafficAnomalies": [{"uuid": "a", "startDate": "2026-10-19T19:00:00Z", "type": "LOCATION",
+                                           "locationDetails": {"code": "GM", "name": "Gambia"}}]}
+        o = radar.outage_signals(outages, 0)
+        a = radar.anomaly_signals(anomalies, 0)
+        self.assertEqual((o[0]["kind"], o[0]["place"]), ("internet_outage", "Iran"))
+        self.assertGreaterEqual(o[0]["score"], 3)
+        self.assertEqual(a[0]["country"], "GM")
+
+
+class ShippingTest(unittest.TestCase):
+    def setUp(self):
+        from tracker.collectors import ais
+        self.ais = ais
+        self.con = sqlite3.connect(":memory:")
+        self.con.executescript(ais.SCHEMA)
+        self.slot = 1792400000 // 900
+        for d in (1, 2, 3):
+            self.con.executemany("INSERT INTO shipping VALUES (?,?,?)", [(p, self.slot - 96 * d, 20) for p in ais.CHOKEPOINTS])
+
+    def test_one_chokepoint_drops(self):
+        counts = {p: 20 for p in self.ais.CHOKEPOINTS}
+        counts["Bab el-Mandeb"] = 3
+        sig = self.ais.judge_slot(self.con, self.slot, counts)
+        self.assertEqual([s["place"] for s in sig], ["Bab el-Mandeb"])
+
+    def test_everything_drops_is_the_feed(self):
+        self.assertEqual(self.ais.judge_slot(self.con, self.slot, {p: 2 for p in self.ais.CHOKEPOINTS}), [])
+
+    def test_counter_rolls_over_and_counts_distinct_ships(self):
+        c = self.ais.Counter()
+        t = (c.slot) * 900
+        c.add(1, 12.5, 43.3, t); c.add(1, 12.6, 43.3, t); c.add(2, 12.5, 43.4, t)
+        done = c.add(3, 0, 0, t + 900)
+        self.assertEqual(done[1]["Bab el-Mandeb"], 2)

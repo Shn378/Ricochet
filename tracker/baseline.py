@@ -22,7 +22,7 @@ GDELT_HOURS = 7 * 24
 FIRMS_DAYS = 5
 IODA_HOURS = 7 * 24
 MIN_HISTORY_HOURS = 24          # below this a feed has no usable baseline yet
-SOLO_Z = {"gdelt": 4.0, "firms": 6.0, "ioda": 0.0, "wiki": 0.0, "adsb": 0.0, "news": 4.0, "seismic": 0.0}  # feeds with no baseline need just presence
+SOLO_Z = {"gdelt": 4.0, "firms": 6.0, "ioda": 0.0, "wiki": 0.0, "adsb": 0.0, "news": 4.0, "seismic": 0.0, "radar": 0.0, "ais": 0.0}  # feeds with no baseline need just presence
 ELEVATED_Z = 3.0
 ELEVATED_RATIO = 2.0
 RATIO_BY_SOURCE = {"firms": 4.0}   # burning seasons swing a lot day to day
@@ -180,8 +180,9 @@ def judge(observed, expected, source, history):
     ratio = observed / expected if expected > 0 else None
     if history < MIN_HISTORY_HOURS:
         # No baseline yet: fall back to strict fixed rules (fires never alone).
-        # Seismic always lands here: the collector already judged "unusual" from 30 days of activity.
-        fixed = {"gdelt": 12, "ioda": 2, "wiki": 2, "adsb": 1.5, "firms": None, "news": 3.5, "seismic": 2.5}.get(source)
+        # Seismic, Radar and AIS always land here: their collectors already judge "unusual"
+        # (30 days of quakes, Cloudflare's own detection, chokepoint history).
+        fixed = {"gdelt": 12, "ioda": 2, "wiki": 2, "adsb": 1.5, "firms": None, "news": 3.5, "seismic": 2.5, "radar": 2.0, "ais": 2.5}.get(source)
         return z, ratio, fixed is not None and observed >= fixed
     need_ratio = RATIO_BY_SOURCE.get(source, ELEVATED_RATIO)
     return z, ratio, z >= ELEVATED_Z and (ratio is None or ratio >= need_ratio)

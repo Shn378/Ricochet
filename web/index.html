@@ -13,7 +13,7 @@
   --fg: #dfe7ee; --muted: #8796a6; --ocean: #0f1d2b; --land: #253546; --border-c: #3a4d61;
   --accent: #e9b44c;
   --c-signal: #7f9bb5; --c-reported: #e9b44c;
-  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7;
+  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7; --s-radar: #d29df0; --s-ais: #4f8fe0;
   --ok: #46b37b; --c-ongoing: #d9785a; --warn: #e9b44c; --bad: #e5484d;
   --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --f-body: "IBM Plex Sans", system-ui, "Segoe UI", sans-serif;
@@ -114,6 +114,7 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
       <span><i style="background:var(--s-firms)"></i>Heat (FIRMS)</span>
       <span><i style="background:var(--s-adsb)"></i>Aircraft</span>
       <span><i style="background:var(--s-seismic)"></i>Seismic</span>
+      <span><i style="background:var(--s-ais)"></i>Shipping</span>
       <span><i style="background:var(--c-ongoing)"></i>Ongoing situation</span>
     </div>
     <div class="lower-third"><div class="lt-place" id="ltPlace"></div><div class="lt-head" id="ltHead"></div></div>
@@ -126,8 +127,8 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
 <script src="vendor/topojson-client.min.js"></script>
 <script>
 const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue(k).trim();
-const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace' };
-const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
+const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace', radar: 'Cloudflare Radar', ais: 'Shipping' };
+const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic','radar','ais'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
 const SCOL = s => SCOLS[s] || '#8796a6';
 const PAL = {};
 const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -195,7 +196,7 @@ async function refreshHealth() {
     document.getElementById('feeds').innerHTML = Object.entries(h.sources).map(([k, v]) => {
       const stale = v.last_ok && (h.now - v.last_ok) > 3600;
       const col = v.ok === null ? C('--muted') : !v.ok ? C('--bad') : stale ? C('--warn') : C('--ok');
-      const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : k === 'airspace' && v.ok ? `${((v.message || '').match(/\d+\/\d+ regions/) || ['starting'])[0]}` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
+      const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : k === 'ais' && v.ok ? `${((v.message || '').match(/\d+\/\d+ chokepoints/) || ['starting'])[0]}` : k === 'airspace' && v.ok ? `${((v.message || '').match(/\d+\/\d+ regions/) || ['starting'])[0]}` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
       return `<span class="feed" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k]}<small>${label}</small></span>`;
     }).join('') + (() => {
       const b = h.baseline || {}, learning = Object.entries(b).filter(([k, v]) => !v.ready).map(([k]) => SRC[k]);
