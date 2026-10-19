@@ -71,7 +71,9 @@ canvas { width: 100%; height: 100%; display: block; }
 #splash { position: fixed; inset: 0; z-index: 50; background: #111820; display: grid; place-items: center; transition: opacity .7s ease; cursor: pointer; }
 #splash.gone { opacity: 0; pointer-events: none; }
 .splash-inner { width: min(92vw, 900px); display: grid; gap: 18px; justify-items: center; }
-.splash-media { position: relative; width: 100%; aspect-ratio: 1400 / 782; }
+.splash-media { position: relative; width: 100%; aspect-ratio: 1400 / 782; display: grid; place-items: center; }
+.splash-word { font: 700 clamp(48px, 11vw, 120px)/1 var(--f-display); letter-spacing: .16em; text-transform: uppercase; text-align: center; animation: logoIn 1.6s ease-out both; }
+.splash-word small { display: block; margin-top: 14px; font: 500 clamp(11px, 1.6vw, 15px) var(--f-mono); letter-spacing: .2em; color: var(--muted); }
 .splash-media video, .splash-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .splash-media img { animation: logoIn 1.6s ease-out both; }
 .splash-media .flare { position: absolute; left: 50%; top: 44%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
@@ -90,13 +92,13 @@ canvas { width: 100%; height: 100%; display: block; }
 <body>
 <div id="splash" role="status" aria-label="Ricochet is starting">
   <div class="splash-inner">
-    <div class="splash-media" id="splashMedia"><img src="logo.jpg" alt="Ricochet, powered by the Tripwire engine"><div class="flare"></div></div>
+    <div class="splash-media" id="splashMedia"><div class="splash-word">Ricochet<small>Powered by the Tripwire engine</small></div></div>
     <div class="splash-bar"><i id="splashBar"></i></div>
     <div class="splash-status" id="splashStatus">Starting the Tripwire engine</div>
   </div>
 </div>
 <header class="bar">
-  <div class="brand-row"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M3 2 L15 18 L27 2" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 18.5 H28" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity=".8"/><circle cx="15" cy="18" r="3" fill="var(--accent)" opacity=".35"/></svg><div class="brand"><b>Ricoch<span>e</span>t</b><small>Powered by the Tripwire engine</small></div></div>
+  <div class="brand-row"><div class="brand"><b>Ricochet</b><small>Powered by the Tripwire engine</small></div></div>
   <div class="live">Live tripwires</div>
   <div class="clock" id="clock"></div>
 </header>
