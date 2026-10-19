@@ -112,7 +112,9 @@ def simulate(series, cell, expected, history, steps, con=None):
                 for s in here:
                     if s.get("site"):
                         site_by.setdefault(src, s["site"])
-        level, reason, site = rules.decide(feeds, cell, expected, site_by) if feeds else (None, None, None)
+        around = set(rules.neighbours(cell))
+        nearby = {src for src, sigs in series.items() for s in sigs if s["cell"] in around and t - 6 * 3600 < s["t"] <= t}
+        level, reason, site = rules.decide(feeds, cell, expected, site_by, None, nearby) if feeds else (None, None, None)
         timeline.append({"t": iso(t), "feeds": feeds, "level": level, "note": reason if not level else None, "reason": reason})
     return timeline
 

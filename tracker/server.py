@@ -29,15 +29,15 @@ _cache = {}
 conflict_zone = rules.conflict_zone
 
 
-def hotspots(con, hours=6, limit=40):
-    """Cached for a minute: the baseline maths is the heavy part on a small laptop."""
+def hotspots(con, hours=6, limit=40, watch=False):
+    """Cached for a minute: the baseline maths is the heavy part on a small machine.
+    "watch" items (lone fires at bases waiting for a second source) are left off the globe."""
     key = (hours, limit)
     hit = _cache.get(key)
-    if hit and time.time() - hit[0] < 60:
-        return hit[1]
-    result = _hotspots(con, hours, limit)
-    _cache[key] = (time.time(), result)
-    return result
+    if not hit or time.time() - hit[0] >= 60:
+        hit = (time.time(), _hotspots(con, hours, limit + 40))
+        _cache[key] = hit
+    return [h for h in hit[1] if watch or h["level"] != "watch"][:limit]
 
 
 def _situations(con):
@@ -72,6 +72,10 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             cells[s["cell"]].append(s)
     expected, history = baseline.expectations(con, hours)
     hot_cc = hot_countries(con)
+    active = defaultdict(set)
+    for c, its in cells.items():
+        for s in its:
+            active[c].add(s["source"])
     out = []
     for cell, items in cells.items():
         by_src = defaultdict(float)
@@ -89,7 +93,8 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             site = json.loads(s["extra"] or "{}").get("site") if isinstance(s["extra"], str) else (s["extra"] or {}).get("site")
             if site and s["source"] not in site_by:
                 site_by[s["source"]] = site
-        level, reason, site = rules.decide(feeds, cell, expected, site_by, hot_cc)
+        nearby = set().union(*(active.get(n, ()) for n in rules.neighbours(cell)))
+        level, reason, site = rules.decide(feeds, cell, expected, site_by, hot_cc, nearby)
         hot = [s for s, f in feeds.items() if f["elevated"]]   # after decide: the site rule can lift a feed
         if debug is not None:
             debug.append({"cell": cell, "feeds": feeds, "lat": items[0]["lat"], "lon": items[0]["lon"], "decision": level, "reason": reason,
@@ -115,7 +120,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             "first": items[0]["observed_at"],
             "last": items[-1]["observed_at"],
         })
-    out.sort(key=lambda h: (h["level"] == "reported", h["score"]), reverse=True)
+    out.sort(key=lambda h: ({"reported": 2, "signal": 1}.get(h["level"], 0), h["score"]), reverse=True)
     return out[:limit]
 
 
@@ -179,7 +184,7 @@ class Handler(SimpleHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
             if u.path == "/api/hotspots":
-                return self._json({"now": int(time.time()), "hotspots": hotspots(self.con, int(q.get("hours", 6)))})
+                return self._json({"now": int(time.time()), "hotspots": hotspots(self.con, int(q.get("hours", 6)), watch=bool(q.get("watch")))})
             if u.path == "/api/situations":   # all=1 for the full country table (tuning)
                 res = dict(_situations(self.con))
                 if not q.get("all"):

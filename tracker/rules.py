@@ -3,7 +3,9 @@ so a replayed incident is judged by exactly the rules that run live.
 """
 from . import baseline
 
-PHYSICAL = {"firms", "wiki"}   # signals the sensitive-site rule can lift
+PHYSICAL = {"firms", "wiki"}
+# Feeds that can corroborate a lone fire: someone, somewhere, is talking about it
+CORROBORATE = {"gdelt", "news", "wiki"}   # signals the sensitive-site rule can lift
 QUIET_SITE = 0.5    # expected score below this = "normally nothing happens here"
 # The smallest signal the quiet-site rule will lift. A 2-3 detection fire 10 km from a
 # range is usually a controlled burn; Wainwright was 8 detections (score 1.6).
@@ -49,7 +51,12 @@ def in_conflict(cell, expected, hot_countries=None):
     return bool(countries_near(cell) & hot_countries)
 
 
-def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None):
+def neighbours(cell, radius=1):
+    la, lo = map(int, cell.split(":"))
+    return [f"{la + a}:{lo + b}" for a in range(-radius, radius + 1) for b in range(-radius, radius + 1)]
+
+
+def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None, nearby=None):
     """feeds: {source: {"z", "elevated", "baseline", ...}}; sites_by_source: {source: site dict}.
     Returns (level or None, reason, site or None)."""
     sites_by_source = sites_by_source or {}
@@ -65,6 +72,11 @@ def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None):
     at_site = [s for s in hot if s in PHYSICAL and s in sites_by_source]
     if at_site:
         site = sites_by_source[at_site[0]]
+        # A lone fire at a base outside any conflict is usually a planned range burn (US bases
+        # in autumn). Hold it as "watch" until news, GDELT or Wikipedia nearby mentions anything.
+        if len(feeds) == 1 and at_site[0] == "firms" and nearby is not None \
+                and not (set(nearby) & CORROBORATE) and not in_conflict(cell, expected, hot_countries):
+            return "watch", f"fire at {site['name']} ({site['kind']}), waiting for a second source", site
         level = "reported" if len(feeds) >= 2 else "signal"
         return level, f"{at_site[0]} above normal at {site['name']} ({site['kind']})", site
     if hot == ["firms"] and not in_conflict(cell, expected, hot_countries):

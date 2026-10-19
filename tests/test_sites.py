@@ -94,3 +94,20 @@ class QuietSiteSizeTest(unittest.TestCase):
         self.assertIsNone(rules.decide(small, "34:-96", {}, site, set())[0])
         big = {"firms": {"observed": 1.6, "expected": 0.0, "z": 1.6, "elevated": False, "baseline": True}}
         self.assertEqual(rules.decide(big, "52:-111", {}, {"firms": {"name": "Wainwright", "kind": "military base"}}, set())[0], "signal")
+
+
+class LoneBaseFireTest(unittest.TestCase):
+    site = {"firms": {"name": "Fort Campbell", "kind": "military base"}}
+    big = staticmethod(lambda: {"firms": {"observed": 7.0, "expected": 0.19, "z": 6.2, "elevated": True, "baseline": True}})
+
+    def test_lone_fire_at_base_waits_for_a_second_source(self):
+        from tracker import rules
+        self.assertEqual(rules.decide(self.big(), "36:-88", {}, self.site, set(), {"firms"})[0], "watch")
+
+    def test_news_nearby_promotes_it(self):
+        from tracker import rules
+        self.assertEqual(rules.decide(self.big(), "36:-88", {}, self.site, set(), {"firms", "gdelt"})[0], "signal")
+
+    def test_conflict_zone_does_not_wait(self):
+        from tracker import rules
+        self.assertEqual(rules.decide(self.big(), "51:36", {}, self.site, {"UA"}, {"firms"})[0], "signal")
