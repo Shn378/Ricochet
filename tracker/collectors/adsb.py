@@ -66,7 +66,9 @@ def squawk_signals(aircraft, code, now):
         flight = (a.get("flight") or a.get("r") or a.get("hex") or "unknown").strip()
         out.append({
             "uid": f"adsb:sqk:{a.get('hex')}:{code}:{now // 1800}",
-            "source": NAME, "kind": "emergency_squawk",
+            # 7700 and 7600 happen dozens of times a day (medical diversions, radio faults):
+            # map context only. A hijack code is a real tripwire.
+            "source": NAME, "kind": "emergency_squawk" if code == "7500" else "squawk_routine",
             "lat": a["lat"], "lon": a["lon"],
             "title": f"Squawk {code} ({SQUAWKS[code]}): {flight}",
             "url": f"https://adsb.lol/?icao={a.get('hex')}",
