@@ -1,0 +1,220 @@
+"""Local web server: the globe page plus a small JSON API.
+
+/api/hotspots?hours=6   cells where signals stack up, strongest first
+/api/signals?hours=24   raw signals (optionally &cell=lat:lon)
+/api/health             last run of each collector
+"""
+import json
+import os
+import threading
+import time
+from collections import defaultdict
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
+
+from . import baseline, db, rules, situations
+
+WEB = os.path.join(db.ROOT, "web")
+SOURCES = ["news", "gdelt", "ioda", "wiki", "firms", "adsb"]
+PRESENCE_ONLY = db.CONTEXT_KINDS   # context layer, never makes a hotspot
+
+
+def rows(con, sql, args=()):
+    return [dict(r) for r in con.execute(sql, args).fetchall()]
+
+
+_cache = {}
+
+
+conflict_zone = rules.conflict_zone
+
+
+def hotspots(con, hours=6, limit=40):
+    """Cached for a minute: the baseline maths is the heavy part on a small laptop."""
+    key = (hours, limit)
+    hit = _cache.get(key)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    result = _hotspots(con, hours, limit)
+    _cache[key] = (time.time(), result)
+    return result
+
+
+def _hotspots(con, hours=6, limit=40, debug=None):
+    """Areas running above their normal level.
+
+    Reported: two or more feeds active in the area and at least one well above normal.
+    Signal:   one feed far above normal on its own (fires need a very big jump,
+              because seasonal burning varies a lot).
+    """
+    since = int(time.time()) - hours * 3600
+    sigs = rows(con, "SELECT * FROM signals WHERE observed_at >= ? AND cell IS NOT NULL ORDER BY observed_at", (since,))
+    cells = defaultdict(list)
+    for s in sigs:
+        if s["kind"] not in PRESENCE_ONLY:
+            cells[s["cell"]].append(s)
+    expected, history = baseline.expectations(con, hours)
+    out = []
+    for cell, items in cells.items():
+        by_src = defaultdict(float)
+        for s in items:
+            by_src[s["source"]] += s["score"] or 1
+        feeds = {}
+        for src, obs in by_src.items():
+            exp = expected.get((cell, src), 0.0)
+            z, ratio, elevated = baseline.judge(obs, exp, src, history.get(src, 0))
+            feeds[src] = {"observed": round(obs, 1), "expected": round(exp, 2), "z": round(z, 1),
+                          "ratio": round(ratio, 1) if ratio else None, "elevated": elevated,
+                          "baseline": history.get(src, 0) >= baseline.MIN_HISTORY_HOURS}
+        hot = [s for s, f in feeds.items() if f["elevated"]]
+        site_by = {}
+        for s in items:
+            site = json.loads(s["extra"] or "{}").get("site") if isinstance(s["extra"], str) else (s["extra"] or {}).get("site")
+            if site and s["source"] not in site_by:
+                site_by[s["source"]] = site
+        level, reason, site = rules.decide(feeds, cell, expected, site_by)
+        if debug is not None:
+            debug.append({"cell": cell, "feeds": feeds, "lat": items[0]["lat"], "lon": items[0]["lon"], "decision": level, "reason": reason,
+                          "place": next((s["place"] for s in items if s.get("place")), None)})
+        if not level:
+            continue
+        best = max(items, key=lambda s: s["score"] or 1)
+        place = next((s["place"] for s in reversed(items) if s.get("place")), None)
+        out.append({
+            "cell": cell,
+            "lat": sum(s["lat"] for s in items) / len(items),
+            "lon": sum(s["lon"] for s in items) / len(items),
+            "level": level,
+            "sources": sorted(feeds),
+            "elevated": sorted(hot),
+            "feeds": feeds,
+            "score": round(max(f["z"] for f in feeds.values()), 1),
+            "count": len(items),
+            "place": place,
+            "headline": best["title"],
+            "reason": reason,
+            "site": site,
+            "first": items[0]["observed_at"],
+            "last": items[-1]["observed_at"],
+        })
+    out.sort(key=lambda h: (h["level"] == "reported", h["score"]), reverse=True)
+    return out[:limit]
+
+
+def health(con):
+    out = {}
+    try:
+        from . import attention
+        feeds = attention.status(con)
+        ok = [f for f in feeds if f["status"] == "active" and f["last_ok"]]
+        bad = [f for f in feeds if f["status"] in ("failing", "dead")]
+        n24 = con.execute("SELECT COUNT(*) FROM signals WHERE source='news' AND fetched_at >= ?", (int(time.time()) - 86400,)).fetchone()[0]
+        out["news"] = {"last_run": max((f["last_checked"] or 0 for f in feeds), default=None) or None, "ok": bool(ok) if feeds else None,
+                       "message": f"{len(ok)} of {len(feeds)} feeds working" + (f", {len(bad)} failing: " + ", ".join(f["name"] for f in bad[:6]) if bad else ""),
+                       "last_ok": max((f["last_ok"] or 0 for f in feeds), default=None) or None, "signals_24h": n24,
+                       "feeds": len(feeds), "feeds_ok": len(ok)}
+    except Exception as e:
+        out["news"] = {"last_run": None, "ok": False, "message": str(e), "last_ok": None, "signals_24h": 0}
+    for src in SOURCES:
+        if src == "news":
+            continue
+        last = con.execute("SELECT * FROM runs WHERE source=? ORDER BY started DESC LIMIT 1", (src,)).fetchone()
+        last_ok = con.execute("SELECT started FROM runs WHERE source=? AND ok=1 ORDER BY started DESC LIMIT 1", (src,)).fetchone()
+        n24 = con.execute("SELECT COUNT(*) FROM signals WHERE source=? AND fetched_at >= ?", (src, int(time.time()) - 86400)).fetchone()[0]
+        out[src] = {
+            "last_run": last["started"] if last else None,
+            "ok": bool(last["ok"]) if last else None,
+            "message": last["message"] if last else "never run",
+            "last_ok": last_ok["started"] if last_ok else None,
+            "signals_24h": n24,
+        }
+    return out
+
+
+class Handler(SimpleHTTPRequestHandler):
+    con = None
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, directory=WEB, **kw)
+
+    def log_message(self, *a):
+        pass
+
+    def _local(self):
+        """True only for a request made on this machine. Requests relayed by Cloudflare's tunnel
+        also arrive from 127.0.0.1, so any proxy header means it came from outside."""
+        if self.client_address[0] not in ("127.0.0.1", "::1"):
+            return False
+        return not any(self.headers.get(h) for h in ("Cf-Connecting-Ip", "X-Forwarded-For", "Cf-Ray", "X-Real-Ip"))
+
+    def _json(self, obj):
+        body = json.dumps(obj).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        u = urlparse(self.path)
+        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        try:
+            if u.path == "/api/hotspots":
+                return self._json({"now": int(time.time()), "hotspots": hotspots(self.con, int(q.get("hours", 6)))})
+            if u.path == "/api/situations":   # all=1 for the full country table (tuning)
+                hit = _cache.get("situations")
+                if not hit or time.time() - hit[0] > 300:
+                    hit = (time.time(), situations.compute(self.con))
+                    _cache["situations"] = hit
+                res = dict(hit[1])
+                if not q.get("all"):
+                    res["countries"] = [c for c in res["countries"] if c["ongoing"]]
+                return self._json(res)
+            if u.path == "/api/replay" and self._local():
+                import importlib
+                from . import replay
+                importlib.reload(rules)      # pick up rule changes without restarting the engine
+                importlib.reload(replay)
+                args = (float(q["lat"]), float(q["lon"]), replay.parse_time(q["start"]), replay.parse_time(q["end"]),
+                        [w for w in q.get("wiki", "").split("|") if w], [k for k in q.get("keywords", "").split(",") if k])
+                from .run import load_config
+                key = load_config().get("firms", "map_key").strip() or None
+                threading.Thread(target=replay.run, args=args, kwargs={"firms_key": key}, daemon=True, name="replay").start()
+                return self._json({"ok": True, "message": "Replay started; results in data/replay.json"})
+            if u.path == "/api/sources":
+                from . import attention
+                return self._json({"now": int(time.time()), "sources": attention.status(self.con)})
+            if u.path == "/api/near":   # tuning view: the areas closest to tripping
+                dbg = []
+                _hotspots(self.con, int(q.get("hours", 6)), 40, dbg)
+                for d in dbg:
+                    d["max_z"] = max(f["z"] for f in d["feeds"].values())
+                dbg.sort(key=lambda d: d["max_z"], reverse=True)
+                return self._json({"now": int(time.time()), "areas": dbg[:30]})
+            if u.path == "/api/signals":
+                since = int(time.time()) - int(q.get("hours", 24)) * 3600
+                if q.get("cell"):
+                    data = rows(self.con, "SELECT * FROM signals WHERE cell=? AND observed_at>=? ORDER BY observed_at", (q["cell"], since))
+                elif q.get("country"):
+                    data = rows(self.con, "SELECT * FROM signals WHERE country=? AND source='gdelt' AND observed_at>=? ORDER BY observed_at DESC LIMIT 200", (q["country"], since))
+                else:
+                    data = rows(self.con, "SELECT * FROM signals WHERE observed_at>=? AND lat IS NOT NULL ORDER BY observed_at DESC LIMIT 3000", (since,))
+                for d in data:
+                    d["extra"] = json.loads(d["extra"] or "{}")
+                return self._json({"now": int(time.time()), "signals": data})
+            if u.path == "/api/shutdown" and self._local():
+                self._json({"ok": True, "message": "Ricochet stopping"})
+                threading.Timer(0.5, lambda: os._exit(0)).start()
+                return
+            if u.path == "/api/health":
+                return self._json({"now": int(time.time()), "sources": health(self.con), "baseline": baseline.status(self.con)})
+        except Exception as e:
+            self.send_error(500, str(e))
+            return
+        return super().do_GET()
+
+
+def serve(port=8765, host="127.0.0.1"):
+    Handler.con = db.connect()
+    ThreadingHTTPServer((host, port), Handler).serve_forever()

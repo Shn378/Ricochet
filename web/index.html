@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ricochet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0b1118; --panel: #111a24; --panel-2: #16212e; --line: #233243;
+  --fg: #dfe7ee; --muted: #8796a6; --ocean: #0f1d2b; --land: #253546; --border-c: #3a4d61;
+  --accent: #e9b44c;
+  --c-signal: #7f9bb5; --c-reported: #e9b44c;
+  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b;
+  --ok: #46b37b; --c-ongoing: #d9785a; --warn: #e9b44c; --bad: #e5484d;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); padding: 12px 16px 20px; }
+a { color: var(--fg); text-decoration-color: var(--muted); text-underline-offset: 2px; }
+a:hover { text-decoration-color: var(--accent); }
+button { font: inherit; color: inherit; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
+.brand b { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: .14em; text-transform: uppercase; }
+.brand b span { color: var(--accent); }
+.brand small { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.live { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--ok); color: var(--ok); padding: 2px 8px; border-radius: 3px; display: inline-flex; gap: 6px; align-items: center; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.clock { font-family: var(--f-mono); font-size: 15px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.feeds { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; }
+.feed { display: inline-flex; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; font-size: 12px; }
+.feed i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.feed small { color: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+.main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.globe-wrap { position: relative; background: radial-gradient(circle at 50% 45%, #13243a 0%, var(--bg) 70%); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; aspect-ratio: 1 / .86; }
+canvas { width: 100%; height: 100%; display: block; }
+.legend { position: absolute; top: 12px; left: 14px; display: grid; gap: 4px; font: 11px var(--f-mono); color: var(--muted); }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; }
+.lower-third { position: absolute; left: 16px; right: 16px; bottom: 14px; pointer-events: none; }
+.lt-place { font-family: var(--f-display); font-weight: 600; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.lt-head { font-family: var(--f-display); font-weight: 600; font-size: clamp(20px, 2.8vw, 30px); line-height: 1.05; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.card h2 { font-family: var(--f-display); font-size: 26px; font-weight: 600; line-height: 1.1; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font: 11px var(--f-mono); text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 3px; border: 1px solid currentColor; }
+.pill.solid { color: var(--bg); border-color: transparent; font-weight: 500; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.sec-label { font: 10.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.sig { display: grid; grid-template-columns: 50px 10px 1fr; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.sig:last-child { border-bottom: 0; }
+.sig time { font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sig i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.sig span { min-width: 0; overflow-wrap: anywhere; }
+.queue { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
+.chip.on { border-color: var(--accent); }
+.stream { margin-top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; }
+.stream h3 { margin: 0 0 8px; font-family: var(--f-display); font-size: 18px; letter-spacing: .08em; text-transform: uppercase; }
+.empty { color: var(--muted); }
+.spark { width: 100%; height: 64px; display: block; }
+.stat { font-size: 14px; margin: 0; max-width: 62ch; }
+.stat b { font-weight: 600; }
+.brand-row { display: flex; align-items: center; gap: 10px; }
+.brand-row svg { width: 30px; height: 22px; flex: none; }
+#splash { position: fixed; inset: 0; z-index: 50; background: #111820; display: grid; place-items: center; transition: opacity .7s ease; cursor: pointer; }
+#splash.gone { opacity: 0; pointer-events: none; }
+.splash-inner { width: min(92vw, 900px); display: grid; gap: 18px; justify-items: center; }
+.splash-media { position: relative; width: 100%; aspect-ratio: 1400 / 782; }
+.splash-media video, .splash-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.splash-media img { animation: logoIn 1.6s ease-out both; }
+.splash-media .flare { position: absolute; left: 50%; top: 44%; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,214,120,.55) 0%, rgba(233,180,76,.18) 40%, transparent 70%); animation: flare 2.4s ease-in-out .9s infinite; }
+@keyframes logoIn { from { opacity: 0; transform: scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes flare { 0%, 100% { opacity: .35; transform: translate(-50%, -50%) scale(.8); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.25); } }
+.splash-status { font: 12px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); min-height: 1.5em; text-align: center; }
+.splash-status b { color: var(--accent); font-weight: 500; }
+.splash-bar { width: min(60vw, 320px); height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.splash-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s ease; }
+@media (prefers-reduced-motion: reduce) { .splash-media img, .splash-media .flare { animation: none; } }
+@media (max-width: 860px) { .main { grid-template-columns: 1fr; } .clock { margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .live::before { animation: none; } }
+</style>
+</head>
+<body>
+<div id="splash" role="status" aria-label="Ricochet is starting">
+  <div class="splash-inner">
+    <div class="splash-media" id="splashMedia"><img src="logo.jpg" alt="Ricochet, powered by the Tripwire engine"><div class="flare"></div></div>
+    <div class="splash-bar"><i id="splashBar"></i></div>
+    <div class="splash-status" id="splashStatus">Starting the Tripwire engine</div>
+  </div>
+</div>
+<header class="bar">
+  <div class="brand-row"><svg viewBox="0 0 30 22" aria-hidden="true"><path d="M3 2 L15 18 L27 2" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 18.5 H28" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity=".8"/><circle cx="15" cy="18" r="3" fill="var(--accent)" opacity=".35"/></svg><div class="brand"><b>Ricoch<span>e</span>t</b><small>Powered by the Tripwire engine</small></div></div>
+  <div class="live">Live tripwires</div>
+  <div class="clock" id="clock"></div>
+</header>
+<div class="feeds" id="feeds"></div>
+<div class="main">
+  <div class="globe-wrap">
+    <canvas id="globe"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--s-news)"></i>News feeds</span>
+      <span><i style="background:var(--s-gdelt)"></i>GDELT news</span>
+      <span><i style="background:var(--s-ioda)"></i>Internet outage</span>
+      <span><i style="background:var(--s-wiki)"></i>Wikipedia</span>
+      <span><i style="background:var(--s-firms)"></i>Heat (FIRMS)</span>
+      <span><i style="background:var(--s-adsb)"></i>Aircraft</span>
+      <span><i style="background:var(--c-ongoing)"></i>Ongoing situation</span>
+    </div>
+    <div class="lower-third"><div class="lt-place" id="ltPlace"></div><div class="lt-head" id="ltHead"></div></div>
+  </div>
+  <section class="card" id="card"></section>
+</div>
+<section class="stream"><h3>Latest signals</h3><div id="latest"></div></section>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script>
+const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue(k).trim();
+const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft' };
+const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb'].forEach(s => SCOLS[s] = C('--s-' + s));
+const SCOL = s => SCOLS[s] || '#8796a6';
+const PAL = {};
+const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const hhmm = ts => new Date(ts * 1000).toISOString().slice(11, 16);
+const ago = ts => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 60 ? m + 'm' : Math.round(m / 60) + 'h'; };
+
+
+/* ---------- Place names from the map's own country outlines ---------- */
+let countryFeats = [];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function placeName(lat, lon) {
+  if (!countryFeats.length) return `${lat.toFixed(1)}, ${lon.toFixed(1)}`;
+  const p = [lon, lat];
+  let f = countryFeats.find(c => d3.geoContains(c, p)), off = false;
+  if (!f) {
+    off = true;
+    f = countryFeats.reduce((a, c) => d3.geoDistance(p, c.c) < d3.geoDistance(p, a.c) ? c : a);
+  }
+  const name = f.properties.name;
+  if (off) return d3.geoDistance(p, f.c) > 0.15 && !countryFeats.some(c => d3.geoDistance(p, c.c) < 0.15) ? 'At sea' : `Near ${name}`;
+  const [[w, s], [e, n]] = f.b;
+  if (e < w) return name;  // straddles the date line: skip the compass part
+  const ns = lat > s + (n - s) * 2 / 3 ? 'north' : lat < s + (n - s) / 3 ? 'south' : '';
+  const ew = lon > w + (e - w) * 2 / 3 ? 'east' : lon < w + (e - w) / 3 ? 'west' : '';
+  // "Southern Sudan", never "South Sudan" (a different country)
+  const dir = ns && ew ? `${ns}-${ew}ern` : ns ? `${ns}ern` : ew ? `${ew}ern` : 'central';
+  return `${cap(dir)} ${name}`;
+}
+const nameOf = h => (h.site && h.site.name) || h.place || h._name || (h._name = placeName(h.lat, h.lon));
+
+let hotspots = [], situations = [], worldShare = null, stops = [], signals = [], focus = null, tourIdx = -1, phaseEnd = 0, cellSignals = [];
+const canvas = document.getElementById('globe'), ctx = canvas.getContext('2d');
+const projection = d3.geoOrthographic().clipAngle(90).precision(0.6), path = d3.geoPath(projection, ctx);
+const graticule = d3.geoGraticule10();
+let land, borders, W, H, base, rot = [0, -20], zoom = 1, tween = null;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function resize() {
+  const r = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  base = Math.min(W, H) * .43; projection.translate([W / 2, H * .46]);
+}
+addEventListener('resize', resize);
+
+function flyTo(lon, lat, z) {
+  let dl = (-lon - rot[0]); dl = ((dl + 540) % 360) - 180;
+  tween = { from: rot.slice(), to: [rot[0] + dl, -lat], z0: zoom, z1: z, t0: performance.now(), dur: reduce ? 1 : 1800 };
+}
+
+async function getJSON(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+async function refresh() {
+  try {
+    const [h, s, o] = await Promise.all([getJSON('/api/hotspots?hours=6'), getJSON('/api/signals?hours=6'), getJSON('/api/situations').catch(() => ({ countries: [] }))]);
+    hotspots = h.hotspots; signals = s.signals; situations = o.countries || []; worldShare = o.world_share;
+    stops = [...hotspots.slice(0, 10).map(x => Object.assign(x, { type: 'hotspot', key: x.cell })),
+             ...situations.slice(0, 8).map(x => Object.assign(x, { type: 'ongoing', key: 'c:' + x.country }))];
+    renderLatest();
+    if (focus) { const f = stops.find(x => x.key === focus.key); if (f) { focus = f; await loadCell(); } renderCard(); }
+  } catch (e) { document.getElementById('latest').innerHTML = `<p class="empty">Can't reach the tracker service (${esc(e.message)}). Is it still running?</p>`; }
+}
+async function refreshHealth() {
+  try {
+    const h = await getJSON('/api/health');
+    document.getElementById('feeds').innerHTML = Object.entries(h.sources).map(([k, v]) => {
+      const stale = v.last_ok && (h.now - v.last_ok) > 3600;
+      const col = v.ok === null ? C('--muted') : !v.ok ? C('--bad') : stale ? C('--warn') : C('--ok');
+      const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
+      return `<span class="feed" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k]}<small>${label}</small></span>`;
+    }).join('') + (() => {
+      const b = h.baseline || {}, learning = Object.entries(b).filter(([k, v]) => !v.ready).map(([k]) => SRC[k]);
+      return learning.length ? `<span class="feed"><small>Learning normal levels: ${learning.join(', ')}</small></span>` : `<span class="feed"><i style="background:${C('--ok')}"></i>Baselines ready</span>`;
+    })();
+  } catch (e) {}
+}
+async function loadCell() {
+  cellSignals = focus.type === 'ongoing'
+    ? (await getJSON('/api/signals?hours=24&country=' + encodeURIComponent(focus.country))).signals
+    : (await getJSON('/api/signals?hours=6&cell=' + encodeURIComponent(focus.cell))).signals;
+}
+const featureFor = c => c._f !== undefined ? c._f : (c._f = countryFeats.find(f => d3.geoContains(f, [c.lon, c.lat])) || null);
+
+async function next() {
+  if (!stops.length) { focus = null; tween = { from: rot.slice(), to: [rot[0] + 20, -20], z0: zoom, z1: 1, t0: performance.now(), dur: 1500 }; renderCard(); phaseEnd = performance.now() + 15000; return; }
+  tourIdx = (tourIdx + 1) % stops.length;
+  await setFocus(stops[tourIdx], 10000);
+}
+async function setFocus(h, dwell) {
+  focus = h; flyTo(h.lon, h.lat, h.type === 'ongoing' ? 1.35 : 1.7); phaseEnd = performance.now() + dwell;
+  try { await loadCell(); } catch (e) { cellSignals = []; }
+  renderCard();
+}
+
+function renderCard() {
+  const card = document.getElementById('card'), lp = document.getElementById('ltPlace'), lh = document.getElementById('ltHead');
+  if (!focus) {
+    lp.textContent = 'Global watch'; lh.textContent = stops.length ? 'Scanning' : 'Nothing above normal right now';
+    card.innerHTML = `<h2>Nothing above normal right now</h2><p class="note">A hotspot opens when an area runs well above its normal level: two feeds active with at least one spiking, or one feed spiking hard on its own. The globe keeps spinning until then.</p>`;
+    return;
+  }
+  const queue = `<div><div class="sec-label">On the tour</div><div class="queue">${stops.map((h, i) => `<button class="chip${h.key === focus.key ? ' on' : ''}" data-i="${i}">${h.type === 'ongoing' ? '● ' : ''}${esc((h.type === 'ongoing' ? h.name : nameOf(h)).slice(0, 28))}</button>`).join('')}</div></div>`;
+  const wireQueue = () => card.querySelectorAll('.chip').forEach(b => b.onclick = () => { tourIdx = +b.dataset.i; setFocus(stops[tourIdx], 25000); });
+  if (focus.type === 'ongoing') { renderOngoing(card, lp, lh, queue); wireQueue(); return; }
+  const lvl = focus.level === 'reported' ? ['Reported', C('--c-reported')] : ['Signal', C('--c-signal')];
+  lp.textContent = nameOf(focus) + ` · ${focus.lat.toFixed(1)}, ${focus.lon.toFixed(1)}`;
+  const el = (focus.elevated || []).map(s => SRC[s].toLowerCase());
+  lh.textContent = focus.site ? `${SRC[focus.elevated[0]]} at a ${focus.site.kind}` : focus.level === 'reported' ? `${focus.sources.length} feeds active, ${el.join(' and ')} above normal` : `${SRC[focus.elevated[0]]} far above normal`;
+  const bySrc = {}; cellSignals.forEach(s => (bySrc[s.source] = bySrc[s.source] || []).push(s));
+  const sigLine = s => `<div class="sig"><time>${hhmm(s.observed_at)}Z</time><i style="background:${SCOL(s.source)}"></i><span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)}</span></div>`;
+  const items = Object.entries(bySrc).sort((a, b) => b[1].length - a[1].length).map(([src, list]) => {
+    const latest = list.slice().reverse().slice(0, 3), more = list.length - latest.length;
+    const f = (focus.feeds || {})[src] || {};
+    const norm = !f.baseline ? 'no baseline yet' : f.ratio ? `${f.ratio}× normal` : 'not usually seen here';
+    return `<div><div class="sec-label" style="color:${SCOL(src)}">${SRC[src]} · ${list.length} · ${f.elevated ? '▲ ' : ''}${norm}</div>${latest.map(sigLine).join('')}${more > 0 ? `<p class="note">+ ${more} more</p>` : ''}</div>`;
+  }).join('');
+  card.innerHTML = `
+    <div class="meta"><span class="pill solid" style="background:${lvl[1]}">${lvl[0]}</span>${focus.sources.map(s => `<span class="pill" style="color:${SCOL(s)}">${SRC[s]}</span>`).join('')}</div>
+    <h2>${esc(nameOf(focus))}</h2>
+    ${focus.site ? `<p class="stat">Sensitive site: <b>${esc(focus.site.name)}</b> (${esc(focus.site.kind)})</p>` : ''}
+    ${focus.reason ? `<p class="stat">Why it's here: ${esc(focus.reason)}</p>` : ''}
+    <p class="note">Automated tripwire signals, compared with this area's normal level. Nothing here is confirmed: no investigator agent or human review yet. First signal ${hhmm(focus.first)}Z, latest ${hhmm(focus.last)}Z, ${focus.count} signals.</p>
+    <div style="display:grid;gap:10px"><div class="sec-label">Signals here, by feed</div>${items || '<p class="empty">Loading…</p>'}</div>
+    ${queue}`;
+  wireQueue();
+}
+
+function sparkline(series, world) {
+  const w = 300, h = 64, n = series.length, bw = w / n - 6, max = Math.max(world * 2.2, ...series.filter(v => v != null)) || 1;
+  const y = v => h - 14 - (v / max) * (h - 22), days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const today = Math.floor(Date.now() / 864e5);
+  const bars = series.map((v, i) => {
+    const x = i * (w / n) + 3, label = days[new Date((today - (n - 1 - i)) * 864e5).getUTCDay()];
+    return `${v == null ? '' : `<rect x="${x}" y="${y(v)}" width="${bw}" height="${h - 14 - y(v)}" rx="2" fill="${C('--c-ongoing')}" opacity="${i === n - 1 ? 1 : .7}"><title>${label}: ${v}% of coverage</title></rect>`}
+      <text x="${x + bw / 2}" y="${h - 2}" text-anchor="middle" font-size="10" fill="${C('--muted')}" font-family="IBM Plex Mono, monospace">${label}</text>`;
+  }).join('');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Conflict share of coverage by day">${bars}
+    <line x1="0" x2="${w}" y1="${y(world)}" y2="${y(world)}" stroke="${C('--muted')}" stroke-dasharray="3 3"/>
+    <text x="${w}" y="${y(world) - 4}" text-anchor="end" font-size="10" fill="${C('--muted')}" font-family="IBM Plex Mono, monospace">world ${world}%</text></svg>`;
+}
+
+function renderOngoing(card, lp, lh, queue) {
+  const s = focus, trendCol = s.trend === 'rising' ? C('--bad') : s.trend === 'easing' ? C('--ok') : C('--muted');
+  const esc8 = s.state === 'escalating';
+  lp.textContent = `${s.name} · ${esc8 ? 'escalating' : 'ongoing situation'}`;
+  lh.textContent = esc8 ? `Conflict coverage up sharply: ${s.recent}% vs ${s.earlier}% earlier in the week` : `Conflict ${s.ratio}× the world level, ${s.trend}`;
+  const sigLine = x => `<div class="sig"><time>${hhmm(x.observed_at)}Z</time><i style="background:${SCOL(x.source)}"></i><span>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title)}</span></div>`;
+  const latest = cellSignals.slice(0, 6);
+  card.innerHTML = `
+    <div class="meta"><span class="pill solid" style="background:${esc8 ? C('--bad') : C('--c-ongoing')}">${esc8 ? 'Escalating' : 'Ongoing'}</span><span class="pill" style="color:${trendCol}">${s.trend}</span></div>
+    <h2>${esc(s.name)}</h2>
+    <p class="stat">Conflict makes up <b>${s.share}%</b> of news coverage about ${esc(s.name)} this week, <b>${s.ratio}×</b> the world average of ${worldShare}%. ${esc8 ? `Over the last two days it has been <b>${s.recent}%</b>, up from ${s.earlier}% earlier in the week.` : `Above that level on ${s.hot_days} of the last ${s.series.length} days.`}</p>
+    <div><div class="sec-label">Share of coverage that is conflict, by day</div>${sparkline(s.series.map(v => v), worldShare)}</div>
+    <div><div class="sec-label">Latest reports</div>${latest.map(sigLine).join('') || '<p class="empty">Loading…</p>'}</div>
+    <p class="note">Measured from how worldwide news is coded by GDELT. It shows sustained conflict coverage, not verified events.</p>
+    ${queue}`;
+}
+
+function renderLatest() {
+  const el = document.getElementById('latest');
+  const list = signals.filter(s => s.kind !== 'military_air').slice(0, 25);
+  el.innerHTML = list.length ? list.map(s => `<div class="sig"><time>${hhmm(s.observed_at)}Z</time><i style="background:${SCOL(s.source)}"></i><span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)}</span></div>`).join('')
+    : '<p class="empty">No signals yet. The first collectors report within a few minutes of starting.</p>';
+}
+
+function draw(t) {
+  if (!PAL.ocean) Object.assign(PAL, { ocean: C('--ocean'), land: C('--land'), border: C('--border-c'), fg: C('--fg'), rep: C('--c-reported'), sig: C('--c-signal'), ongoing: C('--c-ongoing') });
+  projection.scale(base * zoom).rotate(rot);
+  ctx.clearRect(0, 0, W, H);
+  ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = PAL.ocean; ctx.fill();
+  ctx.beginPath(); path(graticule); ctx.strokeStyle = 'rgba(135,150,166,.1)'; ctx.lineWidth = .6; ctx.stroke();
+  ctx.beginPath(); path(land); ctx.fillStyle = PAL.land; ctx.fill();
+  for (const s of situations) {
+    const f = featureFor(s); if (!f) continue;
+    const on = focus && focus.key === 'c:' + s.country;
+    ctx.beginPath(); path(f); ctx.fillStyle = on ? 'rgba(217,120,90,.38)' : 'rgba(217,120,90,.16)'; ctx.fill();
+    if (on) { ctx.strokeStyle = PAL.ongoing; ctx.lineWidth = 1.4; ctx.stroke(); }
+  }
+  ctx.beginPath(); path(borders); ctx.strokeStyle = PAL.border; ctx.lineWidth = .5; ctx.stroke();
+  const centre = [-rot[0], -rot[1]], vis = p => d3.geoDistance(p, centre) < Math.PI / 2 - .03;
+  for (const s of signals) {
+    if (s.lat == null || !vis([s.lon, s.lat])) continue;
+    const [x, y] = projection([s.lon, s.lat]);
+    const faint = s.kind === 'military_air' || s.source === 'firms';
+    ctx.beginPath(); ctx.arc(x, y, faint ? 1.8 : 2.6, 0, 7);
+    ctx.fillStyle = SCOL(s.source); ctx.globalAlpha = faint ? .4 : .85; ctx.fill(); ctx.globalAlpha = 1;
+  }
+  for (const h of hotspots) {
+    if (!vis([h.lon, h.lat])) continue;
+    const [x, y] = projection([h.lon, h.lat]), col = h.level === 'reported' ? PAL.rep : PAL.sig;
+    if (!reduce) { const p = (t / 1600) % 1; ctx.beginPath(); ctx.arc(x, y, 7 + p * 20, 0, 7); ctx.strokeStyle = col; ctx.globalAlpha = 1 - p; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1; }
+    ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+    if (focus && focus.cell === h.cell) { ctx.beginPath(); ctx.arc(x, y, 12, 0, 7); ctx.strokeStyle = PAL.fg; ctx.lineWidth = 1.2; ctx.stroke(); }
+  }
+  ctx.beginPath(); path({ type: 'Sphere' }); ctx.strokeStyle = 'rgba(135,150,166,.35)'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.25, (now - last) / 1000); last = now;
+  if (tween) { const k = Math.min(1, (now - tween.t0) / tween.dur), e = d3.easeCubicInOut(k);
+    rot = [tween.from[0] + (tween.to[0] - tween.from[0]) * e, tween.from[1] + (tween.to[1] - tween.from[1]) * e]; zoom = tween.z0 + (tween.z1 - tween.z0) * e; if (k >= 1) tween = null;
+  } else if (!focus && !reduce) rot[0] += dt * 6;
+  if (now > phaseEnd) { phaseEnd = now + 60000; next(); }
+  document.getElementById('clock').textContent = new Date().toISOString().slice(11, 19) + 'Z';
+  draw(now); requestAnimationFrame(frame);
+}
+
+/* ---------- Splash: plays splash.mp4 if present, otherwise the animated logo, until loading is done ---------- */
+const splash = document.getElementById('splash'), bar = document.getElementById('splashBar'), status = document.getElementById('splashStatus');
+let splashMin = Date.now() + 5000;
+function step(pct, html) { bar.style.width = pct + '%'; status.innerHTML = html; }
+function hideSplash() { splash.classList.add('gone'); setTimeout(() => splash.remove(), 800); }
+splash.addEventListener('click', () => { splashMin = 0; });
+(function tryVideo() {
+  const v = document.createElement('video');
+  Object.assign(v, { src: 'splash.mp4', muted: true, autoplay: true, playsInline: true, preload: 'auto' });
+  v.addEventListener('loadeddata', () => {
+    const m = document.getElementById('splashMedia'); m.innerHTML = ''; m.appendChild(v);
+    splashMin = Math.max(splashMin, Date.now() + (v.duration ? v.duration * 1000 : 5000));
+  }, { once: true });
+  v.addEventListener('error', () => {}, { once: true });   // no video file: keep the animated logo
+})();
+
+(async () => {
+  try {
+    step(15, 'Loading world map');
+    const world = await getJSON('world.json');
+    land = topojson.merge(world, world.objects.countries.geometries);
+    countryFeats = topojson.feature(world, world.objects.countries).features.map(f => Object.assign(f, { c: d3.geoCentroid(f), b: d3.geoBounds(f) }));
+    borders = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
+    resize();
+    step(45, 'Contacting the Tripwire engine');
+    await refresh(); await refreshHealth();
+    const live = document.querySelectorAll('.feed').length;
+    step(80, `<b>${signals.length}</b> signals · <b>${hotspots.length}</b> hotspots · ${live} feeds`);
+    renderCard();
+  } catch (e) {
+    step(100, 'Tripwire engine not responding. Showing what we have');
+  }
+  requestAnimationFrame(frame);
+  setInterval(refresh, 60000); setInterval(refreshHealth, 30000);
+  const wait = Math.max(0, splashMin - Date.now());
+  setTimeout(() => { step(100, status.innerHTML); hideSplash(); }, wait);
+})();
+</script>
+</body>
+</html>

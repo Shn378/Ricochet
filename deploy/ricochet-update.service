@@ -1,0 +1,8 @@
+[Unit]
+Description=Pull Ricochet updates from GitHub
+
+[Service]
+Type=oneshot
+User=@USER@
+WorkingDirectory=@APP@
+ExecStart=/bin/bash @APP@/deploy/update.sh

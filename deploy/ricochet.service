@@ -1,0 +1,15 @@
+[Unit]
+Description=Ricochet (Tripwire engine)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=@USER@
+WorkingDirectory=@APP@
+ExecStart=/usr/bin/python3 -m tracker.run
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
