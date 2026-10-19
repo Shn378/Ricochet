@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlparse
 from . import baseline, db, rules, situations
 
 WEB = os.path.join(db.ROOT, "web")
-SOURCES = ["news", "gdelt", "ioda", "wiki", "firms", "adsb"]
+SOURCES = ["news", "gdelt", "ioda", "wiki", "firms", "adsb", "seismic"]
 PRESENCE_ONLY = db.CONTEXT_KINDS   # context layer, never makes a hotspot
 
 

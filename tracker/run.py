@@ -15,7 +15,7 @@ import traceback
 from datetime import datetime, timezone
 
 from . import baseline, db, sites
-from .collectors import adsb, firms, gdelt, ioda, wiki
+from .collectors import adsb, firms, gdelt, ioda, usgs, wiki
 from .server import serve
 
 CONFIG_PATH = os.path.join(db.ROOT, "config.ini")
@@ -25,6 +25,7 @@ DEFAULTS = {
     "gdelt": {"enabled": "yes", "every_minutes": "15"},
     "ioda": {"enabled": "yes", "every_minutes": "10"},
     "adsb": {"enabled": "yes", "every_minutes": "5"},
+    "seismic": {"enabled": "yes", "every_minutes": "5"},
     "wiki": {"enabled": "yes"},
     "news": {"enabled": "yes", "budget_per_min": "30", "quiet_minutes": "30", "hot_minutes": "2", "world_desk_minutes": "5"},
 }
@@ -137,6 +138,8 @@ def main():
         jobs.append(("ioda", ioda.fetch, cfg.getint("ioda", "every_minutes")))
     if cfg.getboolean("adsb", "enabled"):
         jobs.append(("adsb", adsb.fetch, cfg.getint("adsb", "every_minutes")))
+    if cfg.getboolean("seismic", "enabled"):
+        jobs.append(("seismic", usgs.fetch, cfg.getint("seismic", "every_minutes")))
     if cfg.getboolean("firms", "enabled"):
         key = cfg.get("firms", "map_key").strip()
         if key:
