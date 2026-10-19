@@ -5,6 +5,9 @@ from . import baseline
 
 PHYSICAL = {"firms", "wiki"}   # signals the sensitive-site rule can lift
 QUIET_SITE = 0.5    # expected score below this = "normally nothing happens here"
+# The smallest signal the quiet-site rule will lift. A 2-3 detection fire 10 km from a
+# range is usually a controlled burn; Wainwright was 8 detections (score 1.6).
+QUIET_SITE_MIN = {"firms": 1.5, "wiki": 1.0}
 
 
 def conflict_zone(expected, cell, radius=2, min_reports=1.0):
@@ -53,7 +56,7 @@ def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None):
     # At a sensitive site where normally nothing happens, any physical signal is the anomaly
     for s, f in feeds.items():
         if s in PHYSICAL and s in sites_by_source and not f["elevated"] and f.get("baseline") \
-                and f.get("expected") is not None and f["expected"] < QUIET_SITE and f.get("observed", 0.0) >= 1.0:
+                and f.get("expected") is not None and f["expected"] < QUIET_SITE and f.get("observed", 0.0) >= QUIET_SITE_MIN.get(s, 1.0):
             f["elevated"] = True
             f["quiet_site"] = True
     hot = [s for s, f in feeds.items() if f["elevated"]]

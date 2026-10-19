@@ -84,13 +84,13 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             feeds[src] = {"observed": round(obs, 1), "expected": round(exp, 2), "z": round(z, 1),
                           "ratio": round(ratio, 1) if ratio else None, "elevated": elevated,
                           "baseline": history.get(src, 0) >= baseline.MIN_HISTORY_HOURS}
-        hot = [s for s, f in feeds.items() if f["elevated"]]
         site_by = {}
         for s in items:
             site = json.loads(s["extra"] or "{}").get("site") if isinstance(s["extra"], str) else (s["extra"] or {}).get("site")
             if site and s["source"] not in site_by:
                 site_by[s["source"]] = site
         level, reason, site = rules.decide(feeds, cell, expected, site_by, hot_cc)
+        hot = [s for s, f in feeds.items() if f["elevated"]]   # after decide: the site rule can lift a feed
         if debug is not None:
             debug.append({"cell": cell, "feeds": feeds, "lat": items[0]["lat"], "lon": items[0]["lon"], "decision": level, "reason": reason,
                           "place": next((s["place"] for s in items if s.get("place")), None)})

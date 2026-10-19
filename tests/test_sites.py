@@ -84,3 +84,13 @@ class FiresOnlyConflictTest(unittest.TestCase):
         self.assertIsNone(rules.decide(feeds(), "35:-91", {}, {}, {"UA", "SD"})[0])
         # Same jump near the Ukrainian border (Kursk) counts
         self.assertEqual(rules.decide(feeds(), "51:36", {}, {}, {"UA", "SD"})[0], "signal")
+
+
+class QuietSiteSizeTest(unittest.TestCase):
+    def test_small_fire_near_a_range_is_not_lifted(self):
+        from tracker import rules
+        site = {"firms": {"name": "McAlester Army Ammunition Plant", "kind": "military base"}}
+        small = {"firms": {"observed": 0.99, "expected": 0.0, "z": 1.0, "elevated": False, "baseline": True}}
+        self.assertIsNone(rules.decide(small, "34:-96", {}, site, set())[0])
+        big = {"firms": {"observed": 1.6, "expected": 0.0, "z": 1.6, "elevated": False, "baseline": True}}
+        self.assertEqual(rules.decide(big, "52:-111", {}, {"firms": {"name": "Wainwright", "kind": "military base"}}, set())[0], "signal")
