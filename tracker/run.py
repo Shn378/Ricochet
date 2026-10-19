@@ -61,8 +61,12 @@ def poller(con, name, fn, every_minutes):
                 slot_ts = int(datetime.strptime(gdelt.LAST_COUNTS["_slot"].rsplit("/", 1)[-1][:14], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc).timestamp())
                 db.add_country_counts(con, gdelt.LAST_COUNTS, slot_ts // 86400)
                 db.set_meta(con, "last_slot:gdelt", gdelt.LAST_COUNTS["_slot"])
-            db.log_run(con, name, True, added, f"{len(signals)} signals, {added} new")
-            log(f"[{name}] ok: {len(signals)} signals, {added} new")
+            msg = f"{len(signals)} signals, {added} new"
+            if name == "airspace":
+                failed = adsb.LAST["failed"]
+                msg += f", {len(adsb.REGIONS) - len(failed)}/{len(adsb.REGIONS)} regions" + (f" (failed: {'; '.join(failed)[:300]})" if failed else "")
+            db.log_run(con, name, True, added, msg)
+            log(f"[{name}] ok: {msg}")
         except Exception as e:
             db.log_run(con, name, False, 0, str(e))
             log(f"[{name}] failed: {e}")

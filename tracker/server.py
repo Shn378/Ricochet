@@ -138,7 +138,7 @@ def health(con):
                        "feeds": len(feeds), "feeds_ok": len(ok)}
     except Exception as e:
         out["news"] = {"last_run": None, "ok": False, "message": str(e), "last_ok": None, "signals_24h": 0}
-    for src in SOURCES:
+    for src in SOURCES + ["airspace"]:
         if src == "news":
             continue
         last = con.execute("SELECT * FROM runs WHERE source=? ORDER BY started DESC LIMIT 1", (src,)).fetchone()

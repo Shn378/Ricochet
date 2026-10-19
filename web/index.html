@@ -126,8 +126,8 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
 <script src="vendor/topojson-client.min.js"></script>
 <script>
 const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue(k).trim();
-const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic' };
-const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic'].forEach(s => SCOLS[s] = C('--s-' + s));
+const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace' };
+const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
 const SCOL = s => SCOLS[s] || '#8796a6';
 const PAL = {};
 const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -195,7 +195,7 @@ async function refreshHealth() {
     document.getElementById('feeds').innerHTML = Object.entries(h.sources).map(([k, v]) => {
       const stale = v.last_ok && (h.now - v.last_ok) > 3600;
       const col = v.ok === null ? C('--muted') : !v.ok ? C('--bad') : stale ? C('--warn') : C('--ok');
-      const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
+      const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : k === 'airspace' && v.ok ? `${((v.message || '').match(/\d+\/\d+ regions/) || ['starting'])[0]}` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
       return `<span class="feed" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k]}<small>${label}</small></span>`;
     }).join('') + (() => {
       const b = h.baseline || {}, learning = Object.entries(b).filter(([k, v]) => !v.ready).map(([k]) => SRC[k]);

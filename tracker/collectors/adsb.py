@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS airspace (
 );
 """
 _con, _con_lock = None, threading.Lock()
+LAST = {"failed": []}   # regions that failed on the last run, for the health panel
 
 
 def _db():
@@ -180,10 +181,11 @@ def fetch_regions(deadline_s=150):
             signals += judge_region(name, lat, lon, parse_aircraft(raw), now, con)
         except Exception as e:   # one region failing shouldn't lose the rest
             failed.append(f"{name}: {e}")
-        time.sleep(1)   # be gentle with the community feed
+        time.sleep(3)   # be gentle with the community feed: it slows down rapid callers
     with db._lock:
         con.execute("DELETE FROM airspace WHERE slot < ?", (now // 900 - 96 * 14,))
         con.commit()
+    LAST["failed"] = failed
     if len(failed) == len(REGIONS):
         raise RuntimeError(f"all flashpoint regions failed, e.g. {failed[0]}")
     return b"\n".join(raws), signals
