@@ -24,7 +24,7 @@ DEFAULTS = {
     "firms": {"enabled": "yes", "map_key": "", "every_minutes": "30"},
     "gdelt": {"enabled": "yes", "every_minutes": "15"},
     "ioda": {"enabled": "yes", "every_minutes": "10"},
-    "adsb": {"enabled": "yes", "every_minutes": "5"},
+    "adsb": {"enabled": "yes", "every_minutes": "10"},
     "seismic": {"enabled": "yes", "every_minutes": "5"},
     "radar": {"enabled": "yes", "token": "", "every_minutes": "10"},
     "ais": {"enabled": "yes", "key": ""},
@@ -160,7 +160,7 @@ def main():
     if cfg.getboolean("ioda", "enabled"):
         jobs.append(("ioda", ioda.fetch, cfg.getint("ioda", "every_minutes")))
     if cfg.getboolean("adsb", "enabled"):
-        jobs.append(("adsb", adsb.fetch, cfg.getint("adsb", "every_minutes")))
+        jobs.append(("adsb", adsb.fetch, max(10, cfg.getint("adsb", "every_minutes"))))   # community feed: no faster than every 10 min
         jobs.append(("airspace", adsb.fetch_regions, cfg.getint("adsb", "region_minutes", fallback=15)))
     if cfg.getboolean("seismic", "enabled"):
         jobs.append(("seismic", usgs.fetch, cfg.getint("seismic", "every_minutes")))

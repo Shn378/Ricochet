@@ -62,26 +62,32 @@ BASE = "https://api.adsb.lol/v2"
 # Always the same one: receiver coverage differs between networks, so mixing them would
 # look like traffic rising and falling.
 REGION_BASE = "https://api.airplanes.live/v2"
-_cooldown = {}   # provider base -> unix time it may be asked again
+_cooldown = {}   # provider base -> unix time it may be asked again (also kept in the database across restarts)
 
 
 def polite_get(base, path, timeout):
     """GET from a community feed, backing off when it says we're asking too often."""
     import urllib.error
-    wait = _cooldown.get(base, 0) - time.time()
+    host = base.split("/")[2]
+    if base not in _cooldown:
+        _cooldown[base] = float(db.get_meta(_db(), f"cooldown:{host}", 0))
+    wait = _cooldown[base] - time.time()
     if wait > 0:
         raise RuntimeError(f"rate limited by {base.split('/')[2]}, resting {int(wait // 60) + 1} more min")
     try:
         return get(f"{base}{path}", timeout=timeout)
     except urllib.error.HTTPError as e:
-        if e.code == 429:
+        if e.code in (429, 403):
             try:
                 rest = int(e.headers.get("Retry-After") or 0)
             except ValueError:
                 rest = 0
-            _cooldown[base] = time.time() + max(rest, 15 * 60)
+            # 429: asking too often. 403: refused outright, so ask far less often.
+            _cooldown[base] = time.time() + max(rest, 15 * 60 if e.code == 429 else 6 * 3600)
+            db.set_meta(_db(), f"cooldown:{host}", _cooldown[base])
         raise
 SQUAWKS = {"7500": "hijack code", "7600": "radio failure", "7700": "general emergency"}
+FETCH_SQUAWKS = ["7500", "7700"]   # 7600 dropped to ease the load; 7700 kept as map context
 
 
 def parse_aircraft(payload):
@@ -187,7 +193,7 @@ def judge_region(name, lat, lon, aircraft, now, con):
 def fetch():
     now = int(time.time())
     raws, signals = [], []
-    for code in SQUAWKS:
+    for code in FETCH_SQUAWKS:
         raw = polite_get(BASE, f"/sqk/{code}", 30)
         time.sleep(1)
         raws.append(raw)
