@@ -49,7 +49,12 @@ button { font: inherit; color: inherit; }
 .main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .globe-wrap { position: relative; background: radial-gradient(circle at 50% 45%, #13243a 0%, var(--bg) 70%); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; aspect-ratio: 1 / .86; }
 canvas { width: 100%; height: 100%; display: block; }
-.legend { position: absolute; top: 12px; left: 14px; display: grid; gap: 4px; font: 11px var(--f-mono); color: var(--muted); }
+.legend { position: absolute; top: 10px; left: 10px; font: 11px var(--f-mono); color: var(--muted); z-index: 2; }
+.legend-btn { display: flex; align-items: center; gap: 6px; background: rgba(11,17,24,.72); border: 1px solid var(--line); border-radius: 14px; padding: 5px 10px; color: var(--muted); font: 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; backdrop-filter: blur(3px); }
+.legend-btn .dots { display: flex; gap: 3px; }
+.legend-btn .dots i { width: 6px; height: 6px; }
+.legend-items { display: grid; gap: 4px; margin-top: 6px; background: rgba(11,17,24,.82); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; backdrop-filter: blur(3px); }
+.legend-items[hidden] { display: none; }
 .legend span { display: flex; align-items: center; gap: 6px; }
 .legend i { width: 8px; height: 8px; border-radius: 50%; }
 .lower-third { position: absolute; left: 16px; right: 16px; bottom: 14px; pointer-events: none; }
@@ -127,7 +132,9 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
 <div class="main">
   <div class="globe-wrap">
     <canvas id="globe"></canvas>
-    <div class="legend">
+    <div class="legend" id="legend">
+      <button class="legend-btn" aria-expanded="false" aria-controls="legendItems"><span class="dots" id="legendDots"></span>Key <span class="chev">▾</span></button>
+      <div class="legend-items" id="legendItems" hidden>
       <span><i style="background:var(--s-news)"></i>News feeds</span>
       <span><i style="background:var(--s-gdelt)"></i>GDELT news</span>
       <span><i style="background:var(--s-ioda)"></i>Internet outage</span>
@@ -137,6 +144,9 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
       <span><i style="background:var(--s-seismic)"></i>Seismic</span>
       <span><i style="background:var(--s-ais)"></i>Shipping</span>
       <span><i style="background:var(--c-ongoing)"></i>Ongoing situation</span>
+      <span><i style="background:transparent;border:2px solid var(--c-reported)"></i>Hotspot: reported</span>
+      <span><i style="background:transparent;border:2px solid var(--c-signal)"></i>Hotspot: signal</span>
+      </div>
     </div>
     <div class="lower-third"><div class="lt-place" id="ltPlace"></div><div class="lt-head" id="ltHead"></div></div>
   </div>
@@ -384,6 +394,17 @@ function frame(now) {
   document.getElementById('clock').textContent = new Date().toISOString().slice(11, 19) + 'Z';
   draw(now); requestAnimationFrame(frame);
 }
+
+/* ---------- Map key: collapsed on phones, open on big screens, remembers the choice ---------- */
+(() => {
+  const btn = document.querySelector('.legend-btn'), items = document.getElementById('legendItems');
+  document.getElementById('legendDots').innerHTML = ['news', 'gdelt', 'ioda', 'firms', 'adsb', 'seismic'].map(s => `<i style="background:var(--s-${s})"></i>`).join('');
+  let open = innerWidth > 860;
+  try { const v = localStorage.getItem('legendOpen'); if (v !== null) open = v === '1'; } catch (e) {}
+  const set = o => { open = o; items.hidden = !o; btn.setAttribute('aria-expanded', o); btn.querySelector('.chev').textContent = o ? '▴' : '▾'; };
+  set(open);
+  btn.onclick = e => { e.stopPropagation(); set(!open); try { localStorage.setItem('legendOpen', open ? '1' : '0'); } catch (e) {} };
+})();
 
 /* ---------- Touch and keyboard: swipe cards, tap the globe, arrow keys ---------- */
 (() => {
