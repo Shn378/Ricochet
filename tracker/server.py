@@ -12,7 +12,7 @@ from collections import defaultdict
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import baseline, db, rules, situations
+from . import baseline, db, known_events, rules, situations
 
 WEB = os.path.join(db.ROOT, "web")
 SOURCES = ["news", "gdelt", "ioda", "radar", "infra", "wiki", "firms", "adsb", "ais", "seismic"]
@@ -38,6 +38,21 @@ def hotspots(con, hours=6, limit=40, watch=False):
         hit = (time.time(), _hotspots(con, hours, limit + 40))
         _cache[key] = hit
     return [h for h in hit[1] if watch or h["level"] != "watch"][:limit]
+
+
+_country_cache = {}
+
+
+def _country_of(cell, items):
+    """Country for a square: from its signals if they say, else the nearest town."""
+    for s in items:
+        if s.get("country") and len(s["country"]) == 2 and s["source"] != "gdelt":
+            return s["country"]
+    if cell not in _country_cache:
+        from .places import nearest_country
+        la, lo = map(int, cell.split(":"))
+        _country_cache[cell] = nearest_country(la + 0.5, lo + 0.5)
+    return _country_cache[cell]
 
 
 def _situations(con):
@@ -96,6 +111,15 @@ def _hotspots(con, hours=6, limit=40, debug=None):
         nearby = [x for n in rules.neighbours(cell) for x in texts.get(n, ())]
         level, reason, site = rules.decide(feeds, cell, expected, site_by, hot_cc, nearby)
         hot = [s for s, f in feeds.items() if f["elevated"]]   # after decide: the site rule can lift a feed
+        expected_event = None
+        if level in ("signal", "reported"):
+            active = [s for s, f in feeds.items() if rules.above_normal(f)] or hot
+            expected_event = known_events.match(time.time(), _country_of(cell, items), active)
+            if expected_event:
+                unexplained = [s for s in active if s not in expected_event["feeds"]]
+                if level == "reported" and not unexplained:
+                    level = "signal"   # held until a feed the event doesn't explain backs it up
+                reason = f"{reason} · expected: {expected_event['name']}"
         if debug is not None:
             debug.append({"cell": cell, "feeds": feeds, "lat": items[0]["lat"], "lon": items[0]["lon"], "decision": level, "reason": reason,
                           "place": next((s["place"] for s in items if s.get("place")), None)})
@@ -116,6 +140,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             "place": place,
             "headline": best["title"],
             "reason": reason,
+            "expected": {"name": expected_event["name"], "note": expected_event["note"]} if expected_event else None,
             "site": site,
             "first": items[0]["observed_at"],
             "last": items[-1]["observed_at"],

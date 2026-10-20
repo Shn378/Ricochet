@@ -77,6 +77,7 @@ canvas { width: 100%; height: 100%; display: block; }
 .queue { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
 .chip.on { border-color: var(--accent); }
+.expected { margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--panel-2); font-size: 13px; color: var(--fg); }
 .nav { display: flex; align-items: center; gap: 8px; margin: -4px 0 -2px; }
 .nav .nb { width: 40px; height: 34px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer; }
 .nav .pos { font: 12px var(--f-mono); color: var(--muted); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
@@ -309,7 +310,8 @@ function renderCard() {
     <div class="meta"><span class="pill solid" style="background:${lvl[1]}">${lvl[0]}</span>${focus.sources.map(s => `<span class="pill" style="color:${SCOL(s)}">${SRC[s]}</span>`).join('')}</div>
     <h2>${esc(nameOf(focus))}</h2>
     ${focus.site ? `<p class="stat">Sensitive site: <b>${esc(focus.site.name)}</b> (${esc(focus.site.kind)})</p>` : ''}
-    ${focus.reason ? `<p class="stat">Why it's here: ${esc(focus.reason)}</p>` : ''}
+    ${focus.reason ? `<p class="stat">Why it's here: ${esc(focus.reason.split(' · expected:')[0])}</p>` : ''}
+    ${focus.expected ? `<p class="expected"><b>Expected: ${esc(focus.expected.name)}.</b> ${esc(focus.expected.note)} Check before escalating.</p>` : ''}
     <p class="note">Automated tripwire signals, compared with this area's normal level. Nothing here is confirmed: no investigator agent or human review yet. First signal ${hhmm(focus.first)}Z, latest ${hhmm(focus.last)}Z, ${focus.count} signals.</p>
     <div style="display:grid;gap:10px"><div class="sec-label">Signals here, by feed</div>${items || '<p class="empty">Loading…</p>'}</div>
     ${queue}`;

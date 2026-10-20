@@ -132,3 +132,24 @@ class BackgroundFeedTest(unittest.TestCase):
                  "gdelt": {"observed": 10.0, "expected": 11.0, "z": -0.3, "elevated": False, "baseline": True}}
         site = {"firms": {"name": "CFB St. Hubert", "kind": "air base"}}
         self.assertEqual(rules.decide(feeds, "45:-74", {}, site, set(), [("gdelt", "News report: fight (Montreal)")])[0], "watch")
+
+
+class KnownEventsTest(unittest.TestCase):
+    def ts(self, s):
+        from datetime import datetime, timezone
+        return datetime.strptime(s, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc).timestamp()
+
+    def test_bonfire_night_explains_uk_fires_only(self):
+        from tracker import known_events as k
+        self.assertEqual(k.match(self.ts("2026-11-05 21:00"), "GB", ["firms"])["name"], "UK bonfire season")
+        self.assertIsNone(k.match(self.ts("2026-11-05 21:00"), "FR", ["firms"]))
+        self.assertIsNone(k.match(self.ts("2026-12-05 21:00"), "GB", ["firms"]))
+
+    def test_new_year_wraps_the_year_end(self):
+        from tracker import known_events as k
+        self.assertEqual(k.match(self.ts("2027-01-01 03:00"), "JP", ["firms"])["name"], "New Year's Eve")
+        self.assertEqual(k.match(self.ts("2026-12-31 23:00"), "GB", ["seismic"])["name"], "New Year's Eve")
+
+    def test_santa_explains_wikipedia_not_fires(self):
+        from tracker import known_events as k
+        self.assertEqual(k.match(self.ts("2026-12-24 20:00"), "US", ["wiki"])["name"], "NORAD Tracks Santa")
