@@ -1,36 +1,324 @@
 {
-  "_about": "Layer 2 country backbone: a small, deliberate set of standing feeds (national broadcasters and world desks). Permanent but self-checking: dead or silent feeds are flagged on the health panel. Incident sources (layer 3) are NOT listed here; the scout leases those per hotspot.",
-  "feeds": [
-    {"name": "BBC World", "url": "https://feeds.bbci.co.uk/news/world/rss.xml", "country": null, "lang": "en"},
-    {"name": "BBC Africa", "url": "https://feeds.bbci.co.uk/news/world/africa/rss.xml", "country": null, "lang": "en"},
-    {"name": "BBC Asia", "url": "https://feeds.bbci.co.uk/news/world/asia/rss.xml", "country": null, "lang": "en"},
-    {"name": "BBC Europe", "url": "https://feeds.bbci.co.uk/news/world/europe/rss.xml", "country": null, "lang": "en"},
-    {"name": "BBC Middle East", "url": "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml", "country": null, "lang": "en"},
-    {"name": "BBC Latin America", "url": "https://feeds.bbci.co.uk/news/world/latin_america/rss.xml", "country": null, "lang": "en"},
-    {"name": "BBC US & Canada", "url": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml", "country": null, "lang": "en"},
-    {"name": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "country": null, "lang": "en"},
-    {"name": "France 24 (EN)", "url": "https://www.france24.com/en/rss", "country": null, "lang": "en"},
-    {"name": "DW (EN)", "url": "https://rss.dw.com/rdf/rss-en-all", "country": null, "lang": "en"},
-    {"name": "Guardian World", "url": "https://www.theguardian.com/world/rss", "country": null, "lang": "en"},
-
-    {"name": "ABC News Just In", "url": "https://www.abc.net.au/news/feed/51120/rss.xml", "country": "AU", "lang": "en"},
-    {"name": "SBS News", "url": "https://www.sbs.com.au/news/topic/latest/feed", "country": "AU", "lang": "en"},
-    {"name": "Guardian Australia", "url": "https://www.theguardian.com/australia-news/rss", "country": "AU", "lang": "en"},
-    {"name": "BBC UK", "url": "https://feeds.bbci.co.uk/news/uk/rss.xml", "country": "GB", "lang": "en"},
-    {"name": "Sky News UK", "url": "https://feeds.skynews.com/feeds/rss/uk.xml", "country": "GB", "lang": "en"},
-    {"name": "Guardian UK", "url": "https://www.theguardian.com/uk-news/rss", "country": "GB", "lang": "en"},
-    {"name": "RTÉ News", "url": "https://www.rte.ie/feeds/rss/?index=/news/", "country": "IE", "lang": "en"},
-    {"name": "franceinfo", "url": "https://www.francetvinfo.fr/titres.rss", "country": "FR", "lang": "fr"},
-    {"name": "Le Monde", "url": "https://www.lemonde.fr/rss/une.xml", "country": "FR", "lang": "fr"},
-    {"name": "Tagesschau", "url": "https://www.tagesschau.de/xml/rss2/", "country": "DE", "lang": "de"},
-    {"name": "NPR News", "url": "https://feeds.npr.org/1001/rss.xml", "country": "US", "lang": "en"},
-    {"name": "CBS News US", "url": "https://www.cbsnews.com/latest/rss/us", "country": "US", "lang": "en"},
-    {"name": "Guardian US", "url": "https://www.theguardian.com/us-news/rss", "country": "US", "lang": "en"},
-    {"name": "CBC News", "url": "https://www.cbc.ca/webfeed/rss/rss-topstories", "country": "CA", "lang": "en"},
-    {"name": "RNZ National", "url": "https://www.rnz.co.nz/rss/national.xml", "country": "NZ", "lang": "en"},
-    {"name": "Ukrainska Pravda (EN)", "url": "https://www.pravda.com.ua/eng/rss/", "country": "UA", "lang": "en"},
-    {"name": "Ukrinform (EN)", "url": "https://www.ukrinform.net/rss/block-lastnews", "country": "UA", "lang": "en"},
-    {"name": "Times of Israel", "url": "https://www.timesofisrael.com/feed/", "country": "IL", "lang": "en"},
-    {"name": "The Hindu", "url": "https://www.thehindu.com/news/national/feeder/default.rss", "country": "IN", "lang": "en"}
-  ]
+ "_about": "Layer 2 country backbone: a small, deliberate set of standing feeds (national broadcasters and world desks). Permanent but self-checking: dead or silent feeds are flagged on the health panel. Incident sources (layer 3) are NOT listed here; the scout leases those per hotspot.",
+ "feeds": [
+  {
+   "name": "BBC World",
+   "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "BBC Africa",
+   "url": "https://feeds.bbci.co.uk/news/world/africa/rss.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "BBC Asia",
+   "url": "https://feeds.bbci.co.uk/news/world/asia/rss.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "BBC Europe",
+   "url": "https://feeds.bbci.co.uk/news/world/europe/rss.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "BBC Middle East",
+   "url": "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "BBC Latin America",
+   "url": "https://feeds.bbci.co.uk/news/world/latin_america/rss.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "BBC US & Canada",
+   "url": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "Al Jazeera",
+   "url": "https://www.aljazeera.com/xml/rss/all.xml",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "France 24 (EN)",
+   "url": "https://www.france24.com/en/rss",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "DW (EN)",
+   "url": "https://rss.dw.com/rdf/rss-en-all",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "Guardian World",
+   "url": "https://www.theguardian.com/world/rss",
+   "country": null,
+   "lang": "en"
+  },
+  {
+   "name": "ABC News Just In",
+   "url": "https://www.abc.net.au/news/feed/51120/rss.xml",
+   "country": "AU",
+   "lang": "en"
+  },
+  {
+   "name": "SBS News",
+   "url": "https://www.sbs.com.au/news/topic/latest/feed",
+   "country": "AU",
+   "lang": "en"
+  },
+  {
+   "name": "Guardian Australia",
+   "url": "https://www.theguardian.com/australia-news/rss",
+   "country": "AU",
+   "lang": "en"
+  },
+  {
+   "name": "BBC UK",
+   "url": "https://feeds.bbci.co.uk/news/uk/rss.xml",
+   "country": "GB",
+   "lang": "en"
+  },
+  {
+   "name": "Sky News UK",
+   "url": "https://feeds.skynews.com/feeds/rss/uk.xml",
+   "country": "GB",
+   "lang": "en"
+  },
+  {
+   "name": "Guardian UK",
+   "url": "https://www.theguardian.com/uk-news/rss",
+   "country": "GB",
+   "lang": "en"
+  },
+  {
+   "name": "RTÉ News",
+   "url": "https://www.rte.ie/feeds/rss/?index=/news/",
+   "country": "IE",
+   "lang": "en"
+  },
+  {
+   "name": "franceinfo",
+   "url": "https://www.francetvinfo.fr/titres.rss",
+   "country": "FR",
+   "lang": "fr"
+  },
+  {
+   "name": "Le Monde",
+   "url": "https://www.lemonde.fr/rss/une.xml",
+   "country": "FR",
+   "lang": "fr"
+  },
+  {
+   "name": "Tagesschau",
+   "url": "https://www.tagesschau.de/xml/rss2/",
+   "country": "DE",
+   "lang": "de"
+  },
+  {
+   "name": "NPR News",
+   "url": "https://feeds.npr.org/1001/rss.xml",
+   "country": "US",
+   "lang": "en"
+  },
+  {
+   "name": "CBS News US",
+   "url": "https://www.cbsnews.com/latest/rss/us",
+   "country": "US",
+   "lang": "en"
+  },
+  {
+   "name": "Guardian US",
+   "url": "https://www.theguardian.com/us-news/rss",
+   "country": "US",
+   "lang": "en"
+  },
+  {
+   "name": "CBC News",
+   "url": "https://www.cbc.ca/webfeed/rss/rss-topstories",
+   "country": "CA",
+   "lang": "en"
+  },
+  {
+   "name": "RNZ National",
+   "url": "https://www.rnz.co.nz/rss/national.xml",
+   "country": "NZ",
+   "lang": "en"
+  },
+  {
+   "name": "Ukrainska Pravda (EN)",
+   "url": "https://www.pravda.com.ua/eng/rss/",
+   "country": "UA",
+   "lang": "en"
+  },
+  {
+   "name": "Ukrinform (EN)",
+   "url": "https://www.ukrinform.net/rss/block-lastnews",
+   "country": "UA",
+   "lang": "en"
+  },
+  {
+   "name": "Times of Israel",
+   "url": "https://www.timesofisrael.com/feed/",
+   "country": "IL",
+   "lang": "en"
+  },
+  {
+   "name": "The Hindu",
+   "url": "https://www.thehindu.com/news/national/feeder/default.rss",
+   "country": "IN",
+   "lang": "en"
+  },
+  {
+   "name": "AllAfrica (latest)",
+   "url": "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf",
+   "country": null
+  },
+  {
+   "name": "Middle East Eye",
+   "url": "https://www.middleeasteye.net/rss",
+   "country": null
+  },
+  {
+   "name": "Asharq Al-Awsat (EN)",
+   "url": "https://english.aawsat.com/rss.xml",
+   "country": null
+  },
+  {
+   "name": "L'Orient Today",
+   "url": "https://today.lorientlejour.com/rss",
+   "country": "LB"
+  },
+  {
+   "name": "Meduza (EN)",
+   "url": "https://meduza.io/rss/en/all",
+   "country": "RU"
+  },
+  {
+   "name": "The Moscow Times",
+   "url": "https://www.themoscowtimes.com/rss/news",
+   "country": "RU"
+  },
+  {
+   "name": "Novaya Gazeta Europe",
+   "url": "https://novayagazeta.eu/feed/rss",
+   "country": "RU"
+  },
+  {
+   "name": "Premium Times Nigeria",
+   "url": "https://www.premiumtimesng.com/feed",
+   "country": "NG"
+  },
+  {
+   "name": "Punch Nigeria",
+   "url": "https://punchng.com/feed/",
+   "country": "NG"
+  },
+  {
+   "name": "Sudan Tribune",
+   "url": "https://sudantribune.com/feed/",
+   "country": "SD"
+  },
+  {
+   "name": "Radio Dabanga",
+   "url": "https://www.dabangasudan.org/en/feed",
+   "country": "SD"
+  },
+  {
+   "name": "Addis Standard",
+   "url": "https://addisstandard.com/feed/",
+   "country": "ET"
+  },
+  {
+   "name": "Fana Broadcasting (EN)",
+   "url": "https://www.fanabc.com/english/feed/",
+   "country": "ET"
+  },
+  {
+   "name": "Radio Okapi",
+   "url": "https://www.radiookapi.net/rss.xml",
+   "country": "CD"
+  },
+  {
+   "name": "Sahel Intelligence",
+   "url": "https://sahel-intelligence.com/feed/",
+   "country": null
+  },
+  {
+   "name": "Focus Taiwan (CNA)",
+   "url": "https://focustaiwan.tw/rss/news.xml",
+   "country": "TW"
+  },
+  {
+   "name": "Taipei Times",
+   "url": "https://www.taipeitimes.com/xml/index.rss",
+   "country": "TW"
+  },
+  {
+   "name": "Yonhap (EN)",
+   "url": "https://en.yna.co.kr/RSS/news.xml",
+   "country": "KR"
+  },
+  {
+   "name": "Daily NK (EN)",
+   "url": "https://www.dailynk.com/english/feed/",
+   "country": "KP"
+  },
+  {
+   "name": "NHK World",
+   "url": "https://www3.nhk.or.jp/nhkworld/en/news/ata-glance/index.xml",
+   "country": "JP"
+  },
+  {
+   "name": "Japan Times",
+   "url": "https://www.japantimes.co.jp/feed/",
+   "country": "JP"
+  },
+  {
+   "name": "Inquirer",
+   "url": "https://newsinfo.inquirer.net/feed",
+   "country": "PH"
+  },
+  {
+   "name": "Rappler",
+   "url": "https://www.rappler.com/feed/",
+   "country": "PH"
+  },
+  {
+   "name": "UK Ministry of Defence",
+   "url": "https://www.gov.uk/government/organisations/ministry-of-defence.atom",
+   "country": "GB",
+   "type": "official"
+  },
+  {
+   "name": "US Department of Defense",
+   "url": "https://www.defense.gov/DesktopModules/ArticleCS/RSS.aspx?ContentType=400&Site=945",
+   "country": "US",
+   "type": "official"
+  },
+  {
+   "name": "NATO news",
+   "url": "https://www.nato.int/cps/en/natohq/news_rss.htm",
+   "country": null,
+   "type": "official"
+  },
+  {
+   "name": "IAEA press releases",
+   "url": "https://www.iaea.org/rss/press-releases.xml",
+   "country": null,
+   "type": "official"
+  }
+ ]
 }
