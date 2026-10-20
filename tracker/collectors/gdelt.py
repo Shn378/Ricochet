@@ -7,7 +7,9 @@ Each signal links out to the article that reported it.
 import csv
 import hashlib
 import io
+import re
 import urllib.error
+import urllib.parse
 import zipfile
 from datetime import datetime, timedelta, timezone
 
@@ -35,6 +37,41 @@ def latest_export_url(text):
     raise ValueError("No export file listed in lastupdate.txt")
 
 
+# GDELT's coder reads sport as war ("Gardner charge revives Australia against NZ")
+# and geocodes people's names as places ("Wellington remembered for integrity").
+# The article's address (its slug) usually gives the game away.
+SPORT = re.compile(r"\b(cricket|rugby|football|soccer|nfl|nba|nhl|mlb|afl|nrl|tennis|golf|innings|wickets?|odi|t20|"
+                   r"premier league|champions league|world cup|grand prix|olympics?|playoffs?|semi ?finals?|quarter ?finals?|"
+                   r"tournament|derby|squad|batting|bowling|striker|goalkeeper|touchdown|match report|matchday|"
+                   r"boxing|ufc|mma|wrestling|title fight|knockout)\b")
+OBITUARY = re.compile(r"\b(obituary|obituaries|remembered|dies|died|passes away|passed away|funeral|tributes?|memorial service|celebration of life)\b")
+
+
+def slug_words(url):
+    """'https://x.com/news/an-australian-lawmaker-is-critical/' -> 'an australian lawmaker is critical'"""
+    path = urllib.parse.urlparse(url).path.lower()
+    parts = [p for p in re.split(r"[/]", path) if re.search(r"[a-z]{3,}-[a-z]{3,}", p)]
+    return re.sub(r"[-_.]+", " ", " ".join(parts)).strip()
+
+
+def slug_check(url, geo_cc, geo_name):
+    """(score factor, reason). 0 drops the event."""
+    from .. import places
+    words = slug_words(url)
+    if not words:
+        return 1.0, None
+    if SPORT.search(words):
+        return 0.0, "sport"
+    if OBITUARY.search(words):
+        return 0.3, "obituary or tribute"
+    named = places.countries_in(words)
+    iso = places.FIPS_TO_ISO.get(geo_cc)
+    town = (geo_name or "").split(",")[0].strip().lower()
+    if named and iso and iso not in named and (not town or town not in words):
+        return 0.5, "article names another country"
+    return 1.0, None
+
+
 def kind_of(root, code):
     if code in CONFLICT_CODES:
         return CONFLICT_CODES[code]
@@ -54,15 +91,18 @@ def parse_export(csv_bytes, counts=None):
             continue
         root, code, cc = r[C_ROOT], r[C_CODE], r[C_GEO_CC]
         what = kind_of(root, code)
+        factor, why = slug_check(r[C_URL], cc, r[C_GEO_NAME]) if what and len(r) > C_URL else (1.0, None)
         if counts is not None and cc:
             c = counts.setdefault(cc, {"total": 0, "conflict": 0, "name": None, "lat": None, "lon": None})
             c["total"] += 1
-            if what:
+            if what and factor > 0:   # sport isn't conflict, for the country picture too
                 c["conflict"] += 1
             if r[C_GEO_TYPE] == "1" and r[C_LAT]:
                 c["name"], c["lat"], c["lon"] = r[C_GEO_NAME], float(r[C_LAT]), float(r[C_LON])
             elif not c["name"] and r[C_GEO_NAME]:
                 c["name"] = r[C_GEO_NAME].split(",")[-1].strip()
+        if factor == 0:
+            continue
         if not what or not r[C_LAT] or not r[C_LON] or not r[C_URL]:
             continue
         try:
@@ -74,7 +114,7 @@ def parse_export(csv_bytes, counts=None):
         url = r[C_URL]
         cell = f"{int(lat // 1)}:{int(lon // 1)}"
         key = hashlib.sha1(f"{url}|{cell}".encode()).hexdigest()[:16]
-        score = min(5.0, 1 + int(r[C_SOURCES] or 1) / 2) * (0.5 if national else 1.0)
+        score = min(5.0, 1 + int(r[C_SOURCES] or 1) / 2) * (0.5 if national else 1.0) * factor
         if key in best and best[key]["score"] >= score:
             best[key]["extra"]["events"] += 1
             continue
@@ -90,7 +130,7 @@ def parse_export(csv_bytes, counts=None):
             "url": url,
             "score": score,
             "observed_at": int(when.timestamp()),
-            "extra": {"cameo": code, "mentions": r[C_MENTIONS], "sources": r[C_SOURCES], "events": events},
+            "extra": {"cameo": code, "mentions": r[C_MENTIONS], "sources": r[C_SOURCES], "events": events, "downweighted": why},
         }
     return list(best.values())
 

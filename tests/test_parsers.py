@@ -163,3 +163,13 @@ class Store(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GdeltSlugTest(unittest.TestCase):
+    def test_sport_obituary_and_wrong_country(self):
+        from tracker.collectors import gdelt as g
+        self.assertEqual(g.slug_check("https://x.com/sport/all-blacks-rugby-test-ends-in-brawl", "NZ", "Wellington, New Zealand")[0], 0.0)
+        self.assertEqual(g.slug_check("https://x.com/2026/10/wellington-remembered-for-integrity-leadership/", "NZ", "Wellington, New Zealand")[0], 0.3)
+        self.assertEqual(g.slug_check("https://x.com/an-australian-lawmaker-is-critical-after-car-attack/", "NZ", "Wellington, New Zealand")[0], 0.5)
+        self.assertEqual(g.slug_check("https://x.com/world/russian-drones-hit-kyiv-apartment-block", "UP", "Kyiv, Ukraine")[0], 1.0)
+        self.assertEqual(g.slug_check("https://www.bbc.co.uk/news/articles/c4g7", "UP", "Kyiv, Ukraine")[0], 1.0)
