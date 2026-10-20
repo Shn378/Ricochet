@@ -128,7 +128,7 @@ def health(con):
     out = {}
     try:
         from . import attention
-        feeds = attention.status(con)
+        feeds = [f for f in attention.status(con) if f["status"] != "retired"]
         ok = [f for f in feeds if f["status"] == "active" and f["last_ok"]]
         bad = [f for f in feeds if f["status"] in ("failing", "dead")]
         n24 = con.execute("SELECT COUNT(*) FROM signals WHERE source='news' AND fetched_at >= ?", (int(time.time()) - 86400,)).fetchone()[0]

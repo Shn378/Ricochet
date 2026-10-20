@@ -128,12 +128,6 @@
    "lang": "de"
   },
   {
-   "name": "NPR News",
-   "url": "https://feeds.npr.org/1001/rss.xml",
-   "country": "US",
-   "lang": "en"
-  },
-  {
    "name": "CBS News US",
    "url": "https://www.cbsnews.com/latest/rss/us",
    "country": "US",
@@ -170,12 +164,6 @@
    "lang": "en"
   },
   {
-   "name": "Times of Israel",
-   "url": "https://www.timesofisrael.com/feed/",
-   "country": "IL",
-   "lang": "en"
-  },
-  {
    "name": "The Hindu",
    "url": "https://www.thehindu.com/news/national/feeder/default.rss",
    "country": "IN",
@@ -190,16 +178,6 @@
    "name": "Middle East Eye",
    "url": "https://www.middleeasteye.net/rss",
    "country": null
-  },
-  {
-   "name": "Asharq Al-Awsat (EN)",
-   "url": "https://english.aawsat.com/rss.xml",
-   "country": null
-  },
-  {
-   "name": "L'Orient Today",
-   "url": "https://today.lorientlejour.com/rss",
-   "country": "LB"
   },
   {
    "name": "Meduza (EN)",
@@ -227,19 +205,9 @@
    "country": "NG"
   },
   {
-   "name": "Sudan Tribune",
-   "url": "https://sudantribune.com/feed/",
-   "country": "SD"
-  },
-  {
    "name": "Radio Dabanga",
    "url": "https://www.dabangasudan.org/en/feed",
    "country": "SD"
-  },
-  {
-   "name": "Addis Standard",
-   "url": "https://addisstandard.com/feed/",
-   "country": "ET"
   },
   {
    "name": "Fana Broadcasting (EN)",
@@ -257,11 +225,6 @@
    "country": null
   },
   {
-   "name": "Focus Taiwan (CNA)",
-   "url": "https://focustaiwan.tw/rss/news.xml",
-   "country": "TW"
-  },
-  {
    "name": "Taipei Times",
    "url": "https://www.taipeitimes.com/xml/index.rss",
    "country": "TW"
@@ -275,11 +238,6 @@
    "name": "Daily NK (EN)",
    "url": "https://www.dailynk.com/english/feed/",
    "country": "KP"
-  },
-  {
-   "name": "NHK World",
-   "url": "https://www3.nhk.or.jp/nhkworld/en/news/ata-glance/index.xml",
-   "country": "JP"
   },
   {
    "name": "Japan Times",
@@ -300,24 +258,6 @@
    "name": "UK Ministry of Defence",
    "url": "https://www.gov.uk/government/organisations/ministry-of-defence.atom",
    "country": "GB",
-   "type": "official"
-  },
-  {
-   "name": "US Department of Defense",
-   "url": "https://www.defense.gov/DesktopModules/ArticleCS/RSS.aspx?ContentType=400&Site=945",
-   "country": "US",
-   "type": "official"
-  },
-  {
-   "name": "NATO news",
-   "url": "https://www.nato.int/cps/en/natohq/news_rss.htm",
-   "country": null,
-   "type": "official"
-  },
-  {
-   "name": "IAEA press releases",
-   "url": "https://www.iaea.org/rss/press-releases.xml",
-   "country": null,
    "type": "official"
   }
  ]

@@ -81,6 +81,10 @@ class Budget:
                 self.con.execute("""INSERT INTO sources (url, name, country, layer, added) VALUES (?,?,?,2,?)
                                     ON CONFLICT(url) DO UPDATE SET name=excluded.name, country=excluded.country""",
                                  (fd["url"], fd["name"], fd.get("country"), now))
+            # Feeds taken out of backbone.json are retired, not deleted, so their history stays
+            urls = [fd["url"] for fd in feeds]
+            self.con.execute(f"UPDATE sources SET status='retired' WHERE layer=2 AND url NOT IN ({','.join('?' * len(urls))})", urls)
+            self.con.execute(f"UPDATE sources SET status='active', fails=0 WHERE layer=2 AND status='retired' AND url IN ({','.join('?' * len(urls))})", urls)
             self.con.commit()
 
     # --- heat -------------------------------------------------------------
