@@ -55,6 +55,22 @@ def _country_of(cell, items):
     return _country_cache[cell]
 
 
+def confidence(level, feeds, site, expected_event):
+    """0-100: how much a person should care, used to order the tour.
+    Level sets the floor; independent feeds above normal, how far above, a
+    sensitive site and corroboration raise it; an expected event lowers it."""
+    if level == "watch":
+        return 5
+    active = [f for f in feeds.values() if rules.above_normal(f)]
+    zmax = max((f.get("z", 0) for f in feeds.values()), default=0)
+    c = 40 if level == "reported" else 15
+    c += 12 * max(0, len(active) - 1)              # each extra independent feed
+    c += min(25, 4 * max(0.0, zmax - 3))           # how far above normal
+    c += 8 if site else 0
+    c -= 20 if expected_event else 0
+    return int(max(1, min(100, c)))
+
+
 def _situations(con):
     hit = _cache.get("situations")
     if not hit or time.time() - hit[0] > 300:
@@ -136,6 +152,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             "elevated": sorted(hot),
             "feeds": feeds,
             "score": round(max(f["z"] for f in feeds.values()), 1),
+            "confidence": confidence(level, feeds, site, expected_event),
             "count": len(items),
             "place": place,
             "headline": best["title"],
@@ -145,7 +162,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             "first": items[0]["observed_at"],
             "last": items[-1]["observed_at"],
         })
-    out.sort(key=lambda h: ({"reported": 2, "signal": 1}.get(h["level"], 0), h["score"]), reverse=True)
+    out.sort(key=lambda h: h["confidence"], reverse=True)
     return out[:limit]
 
 
@@ -240,6 +257,9 @@ class Handler(SimpleHTTPRequestHandler):
                 since = int(time.time()) - int(q.get("hours", 24)) * 3600
                 if q.get("cell"):
                     data = rows(self.con, "SELECT * FROM signals WHERE cell=? AND observed_at>=? ORDER BY observed_at", (q["cell"], since))
+                elif q.get("source"):   # latest signals from one feed, for the health panel
+                    data = rows(self.con, "SELECT * FROM signals WHERE source=? AND observed_at>=? ORDER BY observed_at DESC LIMIT ?",
+                                (q["source"], since, min(int(q.get("limit", 10)), 50)))
                 elif q.get("country"):
                     data = rows(self.con, "SELECT * FROM signals WHERE country=? AND source='gdelt' AND observed_at>=? ORDER BY observed_at DESC LIMIT 200", (q["country"], since))
                 else:

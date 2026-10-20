@@ -153,3 +153,15 @@ class KnownEventsTest(unittest.TestCase):
     def test_santa_explains_wikipedia_not_fires(self):
         from tracker import known_events as k
         self.assertEqual(k.match(self.ts("2026-12-24 20:00"), "US", ["wiki"])["name"], "NORAD Tracks Santa")
+
+
+class ConfidenceTest(unittest.TestCase):
+    def test_ordering(self):
+        from tracker.server import confidence
+        two = {"news": {"observed": 5, "expected": 0.5, "z": 6, "elevated": True, "baseline": True},
+               "firms": {"observed": 4, "expected": 0.2, "z": 5, "elevated": True, "baseline": True}}
+        one = {"news": {"observed": 5, "expected": 0.5, "z": 6, "elevated": True, "baseline": True}}
+        hi, lo = confidence("reported", two, None, None), confidence("signal", one, None, None)
+        self.assertGreater(hi, lo)
+        self.assertLess(confidence("reported", two, None, {"name": "x"}), hi)
+        self.assertEqual(confidence("watch", one, None, None), 5)

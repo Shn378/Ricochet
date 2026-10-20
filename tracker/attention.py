@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS sources (
     url         TEXT UNIQUE NOT NULL,
     name        TEXT,
     country     TEXT,              -- ISO2, or NULL for world desks
-    layer       INTEGER NOT NULL,  -- 2 backbone, 3 leased incident source, 4 earned
+    layer       INTEGER NOT NULL,  -- 2 backbone, 3 leased incident source, 4 earned, 5 probation
     status      TEXT NOT NULL DEFAULT 'active',   -- active, failing, dead, retired
     lease_until INTEGER,           -- layer 3 only
     lease_cell  TEXT,
@@ -78,13 +78,14 @@ class Budget:
         now = int(time.time())
         with db._lock:
             for fd in feeds:
-                self.con.execute("""INSERT INTO sources (url, name, country, layer, added) VALUES (?,?,?,2,?)
-                                    ON CONFLICT(url) DO UPDATE SET name=excluded.name, country=excluded.country""",
-                                 (fd["url"], fd["name"], fd.get("country"), now))
+                layer = 5 if fd.get("probation") else 2
+                self.con.execute("""INSERT INTO sources (url, name, country, layer, added) VALUES (?,?,?,?,?)
+                                    ON CONFLICT(url) DO UPDATE SET name=excluded.name, country=excluded.country, layer=excluded.layer""",
+                                 (fd["url"], fd["name"], fd.get("country"), layer, now))
             # Feeds taken out of backbone.json are retired, not deleted, so their history stays
             urls = [fd["url"] for fd in feeds]
-            self.con.execute(f"UPDATE sources SET status='retired' WHERE layer=2 AND url NOT IN ({','.join('?' * len(urls))})", urls)
-            self.con.execute(f"UPDATE sources SET status='active', fails=0 WHERE layer=2 AND status='retired' AND url IN ({','.join('?' * len(urls))})", urls)
+            self.con.execute(f"UPDATE sources SET status='retired' WHERE layer IN (2, 5) AND url NOT IN ({','.join('?' * len(urls))})", urls)
+            self.con.execute(f"UPDATE sources SET status='active', fails=0 WHERE layer IN (2, 5) AND status='retired' AND url IN ({','.join('?' * len(urls))})", urls)
             self.con.commit()
 
     # --- heat -------------------------------------------------------------
@@ -138,6 +139,11 @@ class Budget:
         feed = {"name": s["name"], "country": s["country"], "layer": s["layer"]}
         try:
             raw, items, sigs, newest = news.fetch(dict(feed, url=s["url"]), now)
+            if s["layer"] == 5:
+                # Probation: shown on cards and the map, tallied, but never counted towards a hotspot
+                for sg in sigs:
+                    sg["kind"] = "probation_report"
+                    sg.setdefault("extra", {})["probation"] = True
             snap, sha = db.save_snapshot("news", raw)
             added = db.add_signals(self.con, sigs, snap, sha)
             with db._lock:

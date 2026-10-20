@@ -42,6 +42,10 @@ button { font: inherit; color: inherit; }
 .hsum[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .hlist { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
 .hlist[hidden] { display: none; }
+.hlist .feed { cursor: pointer; color: var(--fg); font: inherit; font-size: 12px; }
+.hlist .feed.on { border-color: var(--accent); }
+.fdetail { width: 100%; display: grid; gap: 4px; }
+.fdetail:empty { display: none; }
 .hnote { width: 100%; color: var(--muted); font: 11px var(--f-mono); padding: 2px 2px 0; }
 .feed { display: inline-flex; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; font-size: 12px; }
 .feed i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -77,6 +81,16 @@ canvas { width: 100%; height: 100%; display: block; }
 .queue { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
 .chip.on { border-color: var(--accent); }
+.conf { margin-left: auto; font: 11px var(--f-mono); color: var(--muted); letter-spacing: .04em; align-self: center; }
+.intro { position: fixed; inset: 0; z-index: 40; background: rgba(5,9,14,.72); display: grid; place-items: center; padding: 16px; }
+.intro[hidden] { display: none; }
+.intro-card { max-width: 520px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 12px; }
+.intro-card h2 { font-family: var(--f-display); font-size: 26px; margin: 0; }
+.intro-card p, .intro-card li { font-size: 14px; line-height: 1.5; margin: 0; }
+.intro-card ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.intro-check { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.intro-ok { justify-self: end; background: var(--accent); color: #111; border: 0; border-radius: 6px; padding: 9px 18px; font: 600 14px var(--f-body); cursor: pointer; }
+.help { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 50%; width: 26px; height: 26px; font: 600 13px var(--f-body); cursor: pointer; }
 .expected { margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--panel-2); font-size: 13px; color: var(--fg); }
 .nav { display: flex; align-items: center; gap: 8px; margin: -4px 0 -2px; }
 .nav .nb { width: 40px; height: 34px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer; }
@@ -129,6 +143,7 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
 <header class="bar">
   <div class="brand-row"><div class="brand"><b aria-label="Ricochet">Ric<svg class="o" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="9"/><circle class="ping" cx="51.1" cy="12.9" r="8" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="51.1" cy="12.9" r="9" fill="var(--accent)" style="stroke:var(--o-cut,#0b1118)" stroke-width="5"/></svg>chet</b><small>Powered by the Tripwire engine</small></div></div>
   <div class="live">Live tripwires</div>
+  <button class="help" onclick="showIntro()" aria-label="What am I looking at?" title="What am I looking at?">?</button>
   <div class="clock" id="clock"></div>
 </header>
 <div class="feeds" id="feeds"></div>
@@ -197,6 +212,21 @@ const nameOf = h => (h.site && h.site.name) || h.place || h._name || (h._name = 
 
 let hotspots = [], situations = [], worldShare = null, stops = [], signals = [], focus = null, tourIdx = -1, phaseEnd = 0, cellSignals = [];
 let manual = false, lastTouch = 0, dwellTotal = 10000, slideDir = 0;
+let feedDetail = null, healthMsgs = {};
+const FEED_SOURCE = { airspace: 'adsb' };   // health entries that report into another feed's signals
+async function showFeed(k, quiet) {
+  feedDetail = k;
+  document.querySelectorAll('.hlist .feed').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  const box = document.getElementById('fdetail'); if (!box) return;
+  if (!k) { box.innerHTML = ''; return; }
+  if (!quiet) box.innerHTML = '<p class="hnote">Loading…</p>';
+  try {
+    const d = await getJSON(`/api/signals?source=${encodeURIComponent(FEED_SOURCE[k] || k)}&hours=72&limit=12`);
+    const list = d.signals.filter(s => k !== 'airspace' || /airspace|jamming/.test(s.kind));
+    box.innerHTML = `<div class="sec-label">${esc(SRC[k] || k)} · latest (72 hours)</div>
+      <p class="hnote">${esc(healthMsgs[k] || '')}</p>` + (list.length ? list.map(s => `<div class="sig"><time>${new Date(s.observed_at * 1000).toISOString().slice(5, 16).replace('T', ' ')}Z</time><i style="background:${SCOL(s.source)}"></i><span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)}</span></div>`).join('') : '<p class="empty">Nothing from this feed in the last 72 hours.</p>');
+  } catch (e) { box.innerHTML = `<p class="empty">Couldn't load (${esc(e.message)}).</p>`; }
+}
 let healthOpen = false; try { healthOpen = !!localStorage.getItem('healthOpen'); } catch (e) {}
 const DWELL = 10000, IDLE_RESUME = 180000;   // auto tour resumes after 3 minutes without interaction
 const canvas = document.getElementById('globe'), ctx = canvas.getContext('2d');
@@ -246,11 +276,14 @@ async function refreshHealth() {
       const stale = v.last_ok && (h.now - v.last_ok) > 3600;
       const col = v.ok === null ? C('--muted') : !v.ok ? C('--bad') : stale ? C('--warn') : C('--ok');
       const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : k === 'ais' && v.ok ? `${((v.message || '').match(/\d+\/\d+ chokepoints/) || ['starting'])[0]}` : k === 'airspace' && v.ok ? `${((v.message || '').match(/\d+\/\d+ regions/) || ['starting'])[0]}` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
-      return `<span class="feed" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k] || k}<small>${label}</small></span>`;
+      return `<button class="feed${k === feedDetail ? ' on' : ''}" data-k="${k}" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k] || k}<small>${label}</small></button>`;
     }).join('');
+    healthMsgs = Object.fromEntries(entries.map(([k, v]) => [k, v.message]));
     const el = document.getElementById('feeds');
     el.innerHTML = `<button class="hsum" aria-expanded="${healthOpen}" aria-controls="hlist"><i style="background:${dot}"></i><b>${good}/${live} feeds healthy</b><small>${esc(detail)}</small><span class="chev">▾</span></button>
-      <div class="hlist" id="hlist"${healthOpen ? '' : ' hidden'}>${pills}${learning.length ? `<p class="hnote">Learning normal levels: ${learning.join(', ')}. Alerts from these use stricter fixed rules until they have a day of history.</p>` : ''}${off.length ? `<p class="hnote">Not running: ${off.join(', ')}</p>` : ''}</div>`;
+      <div class="hlist" id="hlist"${healthOpen ? '' : ' hidden'}>${pills}${learning.length ? `<p class="hnote">Learning normal levels: ${learning.join(', ')}. Alerts from these use stricter fixed rules until they have a day of history.</p>` : ''}${off.length ? `<p class="hnote">Not running: ${off.join(', ')}</p>` : ''}<div class="fdetail" id="fdetail"></div></div>`;
+    el.querySelectorAll('.hlist .feed').forEach(b => b.onclick = () => showFeed(b.dataset.k === feedDetail ? null : b.dataset.k));
+    if (feedDetail) showFeed(feedDetail, true);
     el.querySelector('.hsum').onclick = () => { healthOpen = !healthOpen; try { localStorage.setItem('healthOpen', healthOpen ? '1' : ''); } catch (e) {} refreshHealth(); };
   } catch (e) {}
 }
@@ -271,8 +304,8 @@ function pause() { manual = true; lastTouch = performance.now(); phaseEnd = Infi
 function resume() { manual = false; phaseEnd = performance.now() + 400; renderCard(); }
 function move(d) { if (!stops.length) return; pause(); slideDir = d; tourIdx = ((focus ? tourIdx : -1) + d + stops.length) % stops.length; setFocus(stops[tourIdx], DWELL); }
 function jump(i) { pause(); slideDir = i > tourIdx ? 1 : -1; tourIdx = i; setFocus(stops[i], DWELL); }
-async function setFocus(h, dwell) {
-  focus = h; flyTo(h.lon, h.lat, h.type === 'ongoing' ? 1.35 : 1.7); dwellTotal = dwell; phaseEnd = manual ? Infinity : performance.now() + dwell;
+async function setFocus(h, dwell, stay) {
+  focus = h; if (!stay) flyTo(h.lon, h.lat, h.type === 'ongoing' ? 1.35 : 1.7); dwellTotal = dwell; phaseEnd = manual ? Infinity : performance.now() + dwell;
   try { await loadCell(); } catch (e) { cellSignals = []; }
   renderCard();
 }
@@ -307,7 +340,7 @@ function renderCard() {
     return `<div><div class="sec-label" style="color:${SCOL(src)}">${SRC[src]} · ${list.length} · ${f.elevated ? '▲ ' : ''}${norm}</div>${latest.map(sigLine).join('')}${more > 0 ? `<p class="note">+ ${more} more</p>` : ''}</div>`;
   }).join('');
   card.innerHTML = `${nav}
-    <div class="meta"><span class="pill solid" style="background:${lvl[1]}">${lvl[0]}</span>${focus.sources.map(s => `<span class="pill" style="color:${SCOL(s)}">${SRC[s]}</span>`).join('')}</div>
+    <div class="meta"><span class="pill solid" style="background:${lvl[1]}">${lvl[0]}</span>${focus.sources.map(s => `<span class="pill" style="color:${SCOL(s)}">${SRC[s]}</span>`).join('')}${focus.confidence != null ? `<span class="conf" title="How much attention this deserves, 0-100: level, independent feeds, how far above normal, sensitive site, expected events">Confidence ${focus.confidence >= 60 ? 'high' : focus.confidence >= 30 ? 'medium' : 'low'} · ${focus.confidence}</span>` : ''}</div>
     <h2>${esc(nameOf(focus))}</h2>
     ${focus.site ? `<p class="stat">Sensitive site: <b>${esc(focus.site.name)}</b> (${esc(focus.site.kind)})</p>` : ''}
     ${focus.reason ? `<p class="stat">Why it's here: ${esc(focus.reason.split(' · expected:')[0])}</p>` : ''}
@@ -425,7 +458,34 @@ function frame(now) {
     else if (focus && manual) renderCard();   // a plain tap: show the paused state
   }, { passive: true });
   card.addEventListener('wheel', () => { if (focus && !manual) { pause(); renderCard(); } }, { passive: true });
+  // Drag the globe sideways to explore; the nearest hotspot's card follows. Vertical
+  // swipes are left to the page so phones can still scroll past the globe.
+  canvas.style.touchAction = 'pan-y';
+  let drag = null, dragged = false;
+  canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, r: rot.slice() }; dragged = false; });
+  canvas.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!dragged && Math.hypot(dx, dy) < 6) return;
+    if (!dragged) { dragged = true; pause(); tween = null; }
+    const k = 90 / (base * zoom);   // degrees per pixel, roughly
+    rot = [drag.r[0] + dx * k, Math.max(-80, Math.min(80, drag.r[1] - (e.pointerType === 'mouse' ? dy * k : 0)))];
+  });
+  const endDrag = () => {
+    if (drag && dragged) {   // open the card for the hotspot nearest the middle of the view
+      const centre = [-rot[0], -rot[1]];
+      let best = -1, bd = 0.6;   // within about 35 degrees
+      stops.forEach((h, i) => { const d = d3.geoDistance([h.lon, h.lat], centre); if (d < bd) { bd = d; best = i; } });
+      if (best >= 0 && (!focus || stops[best].key !== focus.key)) { slideDir = 0; tourIdx = best; setFocus(stops[best], DWELL, true); }
+      lastTouch = performance.now();
+    }
+    drag = null;
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', () => { drag = null; });
+  canvas.addEventListener('pointerleave', endDrag);
   canvas.addEventListener('click', e => {   // tap a ring on the globe to open that card
+    if (dragged) { dragged = false; return; }
     const r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
     let best = -1, bd = 26 * 26;
     const centre = [-rot[0], -rot[1]];
@@ -466,6 +526,32 @@ splash.addEventListener('click', () => { splashMin = 0; });
   setInterval(refresh, 60000); setInterval(refreshHealth, 30000);
   const wait = Math.max(0, splashMin - Date.now());
   setTimeout(() => { step(100, status.innerHTML); hideSplash(); }, wait);
+})();
+</script>
+<div class="intro" id="intro" hidden role="dialog" aria-labelledby="introTitle">
+  <div class="intro-card">
+    <h2 id="introTitle">What am I looking at?</h2>
+    <p>Ricochet watches public data for the early echoes of conflict and security incidents: news wires, fire-spotting satellites, internet outages, seismic sensors, aircraft, shipping and Wikipedia edits. Each is compared with what's normal for that place.</p>
+    <ul>
+      <li><b>Rings on the globe</b> are hotspots. <span style="color:var(--c-reported)">Amber = Reported</span>: two or more independent feeds above normal. <span style="color:var(--c-signal)">Grey-blue = Signal</span>: one feed well above normal.</li>
+      <li><b>Cards below</b> explain why each hotspot is there and link to the original reporting. Swipe, use ‹ › or tap a ring. Touching a card pauses the tour.</li>
+      <li><b>Shaded countries</b> have an ongoing or escalating situation in the news.</li>
+      <li><b>Nothing here is confirmed.</b> These are automated tripwires, not verified events. Follow the links to the source.</li>
+    </ul>
+    <label class="intro-check"><input type="checkbox" id="introNever"> Don't show this again</label>
+    <button class="intro-ok" id="introOk">Got it</button>
+  </div>
+</div>
+<script>
+(() => {
+  const box = document.getElementById('intro');
+  let seen = false; try { seen = !!localStorage.getItem('introSeen'); } catch (e) {}
+  if (!seen) setTimeout(() => { box.hidden = false; }, 3800);   // after the splash
+  document.getElementById('introOk').onclick = () => {
+    box.hidden = true;
+    if (document.getElementById('introNever').checked) { try { localStorage.setItem('introSeen', '1'); } catch (e) {} }
+  };
+  window.showIntro = () => { box.hidden = false; };
 })();
 </script>
 </body>

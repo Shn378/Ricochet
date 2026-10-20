@@ -18,7 +18,7 @@ DB_PATH = os.path.join(DATA, "tracker.db")
 RAW_DIR = os.path.join(DATA, "raw")
 
 _lock = threading.Lock()
-CONTEXT_KINDS = {"military_air", "squawk_routine"}   # shown on the map, never counted towards alerts
+CONTEXT_KINDS = {"military_air", "squawk_routine", "probation_report"}   # shown on the map, never counted towards alerts
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS signals (
