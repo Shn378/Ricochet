@@ -54,6 +54,14 @@ def log(msg):
 
 
 def poller(con, name, fn, every_minutes):
+    # Pick up the schedule where the last run left off, so a restart (every code
+    # update) doesn't fire an extra request at each upstream service.
+    last = con.execute("SELECT MAX(started) FROM runs WHERE source=?", (name,)).fetchone()[0]
+    if last:
+        wait = last + every_minutes * 60 - time.time()
+        if wait > 0:
+            log(f"[{name}] next run in {int(wait // 60)} min {int(wait % 60)} s (keeping its schedule across the restart)")
+            time.sleep(wait)
     while True:
         try:
             raw, signals = fn()
