@@ -76,6 +76,15 @@ def corroborated(site, nearby):
     return False
 
 
+def above_normal(f):
+    """Does this feed add anything here? A feed at its everyday level (London's
+    usual GDELT crime coverage) is background, not a second source."""
+    if f.get("elevated") or not f.get("baseline"):
+        return True
+    exp = f.get("expected") or 0.0
+    return f.get("z", 0) >= 1.0 and (exp == 0 or f.get("observed", 0) >= 1.5 * exp)
+
+
 def neighbours(cell, radius=1):
     la, lo = map(int, cell.split(":"))
     return [f"{la + a}:{lo + b}" for a in range(-radius, radius + 1) for b in range(-radius, radius + 1)]
@@ -100,15 +109,17 @@ def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None, near
         site = sites_by_source[at_site[0]]
         # A lone fire at a base outside any conflict is usually a planned range burn (US bases
         # in autumn). Hold it as "watch" until a report nearby names the site and an incident.
-        if len(feeds) == 1 and at_site[0] == "firms" and nearby is not None \
+        active = [k for k, f in feeds.items() if above_normal(f)]
+        if len(active) == 1 and at_site[0] == "firms" and nearby is not None \
                 and not corroborated(site, nearby) and not in_conflict(cell, expected, hot_countries):
             return "watch", f"fire at {site['name']} ({site['kind']}), waiting for a second source", site
-        level = "reported" if len(feeds) >= 2 else "signal"
+        level = "reported" if len(active) >= 2 else "signal"
         return level, f"{at_site[0]} above normal at {site['name']} ({site['kind']})", site
     if hot == ["firms"] and not in_conflict(cell, expected, hot_countries):
         return None, "fires only, away from conflict zones and sensitive sites", None
-    if len(feeds) >= 2:
-        return "reported", f"{len(feeds)} feeds active, {', '.join(hot)} above normal", None
+    active = [k for k, f in feeds.items() if above_normal(f)]
+    if len(active) >= 2:
+        return "reported", f"{len(active)} feeds above their usual level, {', '.join(hot)} well above", None
     f = feeds[hot[0]]
     if f.get("baseline") and f["z"] < baseline.SOLO_Z.get(hot[0], 0):
         return None, f"{hot[0]} above normal but not enough on its own", None

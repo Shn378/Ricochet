@@ -111,3 +111,24 @@ class LoneBaseFireTest(unittest.TestCase):
     def test_conflict_zone_does_not_wait(self):
         from tracker import rules
         self.assertEqual(rules.decide(self.big(), "51:36", {}, self.site, {"UA"}, [])[0], "signal")
+
+
+class BackgroundFeedTest(unittest.TestCase):
+    def test_everyday_news_does_not_make_it_reported(self):
+        from tracker import rules
+        feeds = {"infra": {"observed": 2.5, "expected": 0.0, "z": 2.5, "elevated": True, "baseline": False},
+                 "gdelt": {"observed": 20.0, "expected": 19.0, "z": 0.2, "elevated": False, "baseline": True}}
+        self.assertEqual(rules.decide(feeds, "51:0", {}, {}, set(), [])[0], "signal")
+
+    def test_two_feeds_both_up_is_reported(self):
+        from tracker import rules
+        feeds = {"infra": {"observed": 2.5, "expected": 0.0, "z": 2.5, "elevated": True, "baseline": False},
+                 "gdelt": {"observed": 40.0, "expected": 19.0, "z": 4.7, "elevated": True, "baseline": True}}
+        self.assertEqual(rules.decide(feeds, "51:0", {}, {}, set(), [])[0], "reported")
+
+    def test_base_fire_in_a_busy_city_still_waits(self):
+        from tracker import rules
+        feeds = {"firms": {"observed": 3.0, "expected": 0.2, "z": 2.5, "elevated": True, "baseline": True},
+                 "gdelt": {"observed": 10.0, "expected": 11.0, "z": -0.3, "elevated": False, "baseline": True}}
+        site = {"firms": {"name": "CFB St. Hubert", "kind": "air base"}}
+        self.assertEqual(rules.decide(feeds, "45:-74", {}, site, set(), [("gdelt", "News report: fight (Montreal)")])[0], "watch")
