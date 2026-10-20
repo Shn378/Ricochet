@@ -85,8 +85,10 @@ def wiki_runner(con):
     def on_error(msg):
         db.log_run(con, "wiki", False, 0, msg)
         log(f"[wiki] {msg}")
+    def on_status(msg):
+        db.log_run(con, "wiki", True, 0, msg)
     db.log_run(con, "wiki", True, 0, "stream starting")
-    wiki.stream(on_signal, on_error)
+    wiki.stream(on_signal, on_error, on_status)
 
 
 def ais_runner(con, key):
@@ -159,7 +161,7 @@ def main():
         jobs.append(("ioda", ioda.fetch, cfg.getint("ioda", "every_minutes")))
     if cfg.getboolean("adsb", "enabled"):
         jobs.append(("adsb", adsb.fetch, cfg.getint("adsb", "every_minutes")))
-        jobs.append(("airspace", adsb.fetch_regions, cfg.getint("adsb", "every_minutes")))
+        jobs.append(("airspace", adsb.fetch_regions, cfg.getint("adsb", "region_minutes", fallback=15)))
     if cfg.getboolean("seismic", "enabled"):
         jobs.append(("seismic", usgs.fetch, cfg.getint("seismic", "every_minutes")))
     if cfg.getboolean("firms", "enabled"):

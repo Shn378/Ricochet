@@ -140,7 +140,9 @@ def stream(key, on_signals, on_status, on_error=print):
                     slot, counts = done
                     sigs = judge_slot(con, slot, counts)
                     on_signals(sigs, json.dumps({"slot": slot, "counts": counts}).encode())
-                    on_status(f"{sum(counts.values())} ships across {sum(1 for v in counts.values() if v)}/{len(CHOKEPOINTS)} chokepoints in 15 min"
+                    quiet = [p for p, v in counts.items() if not v]
+                    on_status(f"{sum(counts.values())} ships across {len(CHOKEPOINTS) - len(quiet)}/{len(CHOKEPOINTS)} chokepoints in 15 min"
+                              + (f"; no coverage this slot: {', '.join(quiet)}" if quiet else "")
                               + (f", {len(sigs)} drop(s)" if sigs else ""))
         except Exception as e:
             on_error(f"ais stream dropped: {e}; reconnecting in {backoff}s")

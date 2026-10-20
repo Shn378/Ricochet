@@ -48,10 +48,39 @@ def _db():
         if _con is None:
             _con = db.connect()
             _con.executescript(SCHEMA)
+            if not db.get_meta(_con, "airspace_provider_v2"):
+                # Regions moved to airplanes.live: start their history again on the new network
+                with db._lock:
+                    _con.execute("DELETE FROM airspace")
+                    _con.commit()
+                db.set_meta(_con, "airspace_provider_v2", int(time.time()))
         return _con
 
 NAME = "adsb"
 BASE = "https://api.adsb.lol/v2"
+# Regions come from a second community network so one provider isn't asked for everything.
+# Always the same one: receiver coverage differs between networks, so mixing them would
+# look like traffic rising and falling.
+REGION_BASE = "https://api.airplanes.live/v2"
+_cooldown = {}   # provider base -> unix time it may be asked again
+
+
+def polite_get(base, path, timeout):
+    """GET from a community feed, backing off when it says we're asking too often."""
+    import urllib.error
+    wait = _cooldown.get(base, 0) - time.time()
+    if wait > 0:
+        raise RuntimeError(f"rate limited by {base.split('/')[2]}, resting {int(wait // 60) + 1} more min")
+    try:
+        return get(f"{base}{path}", timeout=timeout)
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            try:
+                rest = int(e.headers.get("Retry-After") or 0)
+            except ValueError:
+                rest = 0
+            _cooldown[base] = time.time() + max(rest, 15 * 60)
+        raise
 SQUAWKS = {"7500": "hijack code", "7600": "radio failure", "7700": "general emergency"}
 
 
@@ -159,10 +188,11 @@ def fetch():
     now = int(time.time())
     raws, signals = [], []
     for code in SQUAWKS:
-        raw = get(f"{BASE}/sqk/{code}", timeout=30)
+        raw = polite_get(BASE, f"/sqk/{code}", 30)
+        time.sleep(1)
         raws.append(raw)
         signals += squawk_signals(parse_aircraft(raw), code, now)
-    raw = get(f"{BASE}/mil", timeout=60)
+    raw = polite_get(BASE, "/mil", 60)
     raws.append(raw)
     signals += military_signals(parse_aircraft(raw), now)
     return b"\n".join(raws), signals
@@ -178,12 +208,12 @@ def fetch_regions(deadline_s=150):
             failed.append(f"{name}: skipped, out of time")
             continue
         try:
-            raw = get(f"{BASE}/point/{lat}/{lon}/{RADIUS_NM}", timeout=20)
+            raw = polite_get(REGION_BASE, f"/point/{lat}/{lon}/{RADIUS_NM}", 20)
             raws.append(raw)
             signals += judge_region(name, lat, lon, parse_aircraft(raw), now, con)
         except Exception as e:   # one region failing shouldn't lose the rest
             failed.append(f"{name}: {e}")
-        time.sleep(3)   # be gentle with the community feed: it slows down rapid callers
+        time.sleep(2)   # airplanes.live asks for no more than one request a second
     with db._lock:
         con.execute("DELETE FROM airspace WHERE slot < ?", (now // 900 - 96 * 14,))
         con.commit()

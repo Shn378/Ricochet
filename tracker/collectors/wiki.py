@@ -98,9 +98,11 @@ def handle(ev, tracker, lookup=coordinates):
     return None
 
 
-def stream(on_signal, on_error=print):
-    """Blocks forever, reconnecting on errors. on_signal(signal, raw_line_bytes)."""
+def stream(on_signal, on_error=print, on_status=None):
+    """Blocks forever, reconnecting on errors. on_signal(signal, raw_line_bytes).
+    on_status(message) every 15 minutes, so a quiet hour doesn't look like a dead stream."""
     tracker = BurstTracker()
+    seen, last_beat = 0, time.time()
     while True:
         try:
             req = urllib.request.Request(STREAM, headers={"User-Agent": USER_AGENT, "Accept": "text/event-stream"})
@@ -113,6 +115,10 @@ def stream(on_signal, on_error=print):
                         ev = json.loads(line[5:])
                     except ValueError:
                         continue
+                    seen += 1
+                    if on_status and time.time() - last_beat > 900:
+                        on_status(f"stream live: {seen} edits checked in the last 15 min")
+                        seen, last_beat = 0, time.time()
                     try:
                         s = handle(ev, tracker)
                     except Exception as e:  # a failed coordinate lookup shouldn't kill the stream
