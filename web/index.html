@@ -33,7 +33,16 @@ button { font: inherit; color: inherit; }
 .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: blink 1.6s infinite; }
 @keyframes blink { 50% { opacity: .25; } }
 .clock { font-family: var(--f-mono); font-size: 15px; margin-left: auto; font-variant-numeric: tabular-nums; }
-.feeds { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; }
+.feeds { padding: 10px 0; }
+.hsum { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; color: var(--fg); font: 13px var(--f-body); cursor: pointer; }
+.hsum > i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.hsum b { font-weight: 600; white-space: nowrap; }
+.hsum small { color: var(--muted); font: 11px var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.hsum .chev { color: var(--muted); transition: transform .2s; flex: none; }
+.hsum[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.hlist { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+.hlist[hidden] { display: none; }
+.hnote { width: 100%; color: var(--muted); font: 11px var(--f-mono); padding: 2px 2px 0; }
 .feed { display: inline-flex; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; font-size: 12px; }
 .feed i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .feed small { color: var(--muted); font-family: var(--f-mono); font-size: 11px; }
@@ -173,6 +182,7 @@ const nameOf = h => (h.site && h.site.name) || h.place || h._name || (h._name = 
 
 let hotspots = [], situations = [], worldShare = null, stops = [], signals = [], focus = null, tourIdx = -1, phaseEnd = 0, cellSignals = [];
 let manual = false, lastTouch = 0, dwellTotal = 10000, slideDir = 0;
+let healthOpen = false; try { healthOpen = !!localStorage.getItem('healthOpen'); } catch (e) {}
 const DWELL = 10000, IDLE_RESUME = 180000;   // auto tour resumes after 3 minutes without interaction
 const canvas = document.getElementById('globe'), ctx = canvas.getContext('2d');
 const projection = d3.geoOrthographic().clipAngle(90).precision(0.6), path = d3.geoPath(projection, ctx);
@@ -207,15 +217,26 @@ async function refresh() {
 async function refreshHealth() {
   try {
     const h = await getJSON('/api/health');
-    document.getElementById('feeds').innerHTML = Object.entries(h.sources).map(([k, v]) => {
+    const entries = Object.entries(h.sources);
+    const state = v => v.ok === null ? 'off' : !v.ok ? 'bad' : (v.last_ok && (h.now - v.last_ok) > 3600) ? 'stale' : 'ok';
+    const bad = entries.filter(([k, v]) => state(v) === 'bad').map(([k]) => SRC[k]);
+    const stale = entries.filter(([k, v]) => state(v) === 'stale').map(([k]) => SRC[k]);
+    const off = entries.filter(([k, v]) => state(v) === 'off').map(([k]) => SRC[k]);
+    const live = entries.length - off.length, good = live - bad.length - stale.length;
+    const b = h.baseline || {}, learning = Object.entries(b).filter(([k, v]) => !v.ready).map(([k]) => SRC[k]);
+    const dot = bad.length ? C('--bad') : stale.length ? C('--warn') : C('--ok');
+    const detail = [bad.length ? `${bad.length} failing: ${bad.join(', ')}` : '', stale.length ? `quiet: ${stale.join(', ')}` : '',
+                    learning.length ? `learning: ${learning.join(', ')}` : 'baselines ready'].filter(Boolean).join(' · ');
+    const pills = entries.map(([k, v]) => {
       const stale = v.last_ok && (h.now - v.last_ok) > 3600;
       const col = v.ok === null ? C('--muted') : !v.ok ? C('--bad') : stale ? C('--warn') : C('--ok');
       const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : k === 'ais' && v.ok ? `${((v.message || '').match(/\d+\/\d+ chokepoints/) || ['starting'])[0]}` : k === 'airspace' && v.ok ? `${((v.message || '').match(/\d+\/\d+ regions/) || ['starting'])[0]}` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
-      return `<span class="feed" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k]}<small>${label}</small></span>`;
-    }).join('') + (() => {
-      const b = h.baseline || {}, learning = Object.entries(b).filter(([k, v]) => !v.ready).map(([k]) => SRC[k]);
-      return learning.length ? `<span class="feed"><small>Learning normal levels: ${learning.join(', ')}</small></span>` : `<span class="feed"><i style="background:${C('--ok')}"></i>Baselines ready</span>`;
-    })();
+      return `<span class="feed" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k] || k}<small>${label}</small></span>`;
+    }).join('');
+    const el = document.getElementById('feeds');
+    el.innerHTML = `<button class="hsum" aria-expanded="${healthOpen}" aria-controls="hlist"><i style="background:${dot}"></i><b>${good}/${live} feeds healthy</b><small>${esc(detail)}</small><span class="chev">▾</span></button>
+      <div class="hlist" id="hlist"${healthOpen ? '' : ' hidden'}>${pills}${learning.length ? `<p class="hnote">Learning normal levels: ${learning.join(', ')}. Alerts from these use stricter fixed rules until they have a day of history.</p>` : ''}${off.length ? `<p class="hnote">Not running: ${off.join(', ')}</p>` : ''}</div>`;
+    el.querySelector('.hsum').onclick = () => { healthOpen = !healthOpen; try { localStorage.setItem('healthOpen', healthOpen ? '1' : ''); } catch (e) {} refreshHealth(); };
   } catch (e) {}
 }
 async function loadCell() {
