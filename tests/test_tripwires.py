@@ -117,3 +117,25 @@ class ShippingTest(unittest.TestCase):
         c.add(1, 12.5, 43.3, t); c.add(1, 12.6, 43.3, t); c.add(2, 12.5, 43.4, t)
         done = c.add(3, 0, 0, t + 900)
         self.assertEqual(done[1]["Bab el-Mandeb"], 2)
+
+
+class InfraTest(unittest.TestCase):
+    def test_gcp_open_incident_placed_at_region(self):
+        from tracker.collectors import infra
+        payload = json.dumps([
+            {"id": "a1", "begin": "2026-10-20T10:30:00+00:00", "end": None, "severity": "high",
+             "external_desc": "Multiple services experiencing elevated errors", "uri": "incidents/a1",
+             "currently_affected_locations": [{"id": "europe-west2", "title": "London (europe-west2)"}],
+             "affected_products": [{"title": "Cloud Run"}], "most_recent_update": {"text": "Investigating"}},
+            {"id": "old", "begin": "2026-10-01T10:00:00+00:00", "end": "2026-10-01T12:00:00+00:00", "external_desc": "x"}]).encode()
+        sig = infra.gcp_signals(payload, 0)
+        self.assertEqual([(s["place"], s["kind"]) for s in sig], [("London", "infra_outage")])
+        self.assertIn("Cause not confirmed", sig[0]["title"])
+
+    def test_statuspage_incident_located_from_name(self):
+        from tracker.collectors import infra
+        payload = json.dumps({"incidents": [{"id": "c", "name": "Elevated errors in Frankfurt", "impact": "major",
+                                             "created_at": "2026-10-20T10:00:00Z", "components": []}]}).encode()
+        sig = infra.statuspage_signals("Cloudflare", payload, 0)
+        self.assertEqual(len(sig), 1)
+        self.assertTrue(sig[0]["place"].startswith("Frankfurt"))

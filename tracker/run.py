@@ -15,7 +15,7 @@ import traceback
 from datetime import datetime, timezone
 
 from . import baseline, db, sites
-from .collectors import adsb, ais, firms, gdelt, ioda, radar, usgs, wiki
+from .collectors import adsb, ais, firms, gdelt, infra, ioda, radar, usgs, wiki
 from .server import serve
 
 CONFIG_PATH = os.path.join(db.ROOT, "config.ini")
@@ -26,6 +26,7 @@ DEFAULTS = {
     "ioda": {"enabled": "yes", "every_minutes": "10"},
     "adsb": {"enabled": "yes", "every_minutes": "10"},
     "seismic": {"enabled": "yes", "every_minutes": "5"},
+    "infra": {"enabled": "yes", "every_minutes": "5"},
     "radar": {"enabled": "yes", "token": "", "every_minutes": "10"},
     "ais": {"enabled": "yes", "key": ""},
     "wiki": {"enabled": "yes"},
@@ -162,6 +163,8 @@ def main():
     if cfg.getboolean("adsb", "enabled"):
         jobs.append(("adsb", adsb.fetch, max(10, cfg.getint("adsb", "every_minutes"))))   # community feed: no faster than every 10 min
         jobs.append(("airspace", adsb.fetch_regions, cfg.getint("adsb", "region_minutes", fallback=15)))
+    if cfg.getboolean("infra", "enabled"):
+        jobs.append(("infra", infra.fetch, cfg.getint("infra", "every_minutes")))
     if cfg.getboolean("seismic", "enabled"):
         jobs.append(("seismic", usgs.fetch, cfg.getint("seismic", "every_minutes")))
     if cfg.getboolean("firms", "enabled"):

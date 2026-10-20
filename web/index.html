@@ -13,7 +13,7 @@
   --fg: #dfe7ee; --muted: #8796a6; --ocean: #0f1d2b; --land: #253546; --border-c: #3a4d61;
   --accent: #e9b44c;
   --c-signal: #7f9bb5; --c-reported: #e9b44c;
-  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7; --s-radar: #d29df0; --s-ais: #4f8fe0;
+  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7; --s-radar: #d29df0; --s-ais: #4f8fe0; --s-infra: #e06c9f;
   --ok: #46b37b; --c-ongoing: #d9785a; --warn: #e9b44c; --bad: #e5484d;
   --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --f-body: "IBM Plex Sans", system-ui, "Segoe UI", sans-serif;
@@ -145,6 +145,7 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
       <span><i style="background:var(--s-adsb)"></i>Aircraft</span>
       <span><i style="background:var(--s-seismic)"></i>Seismic</span>
       <span><i style="background:var(--s-ais)"></i>Shipping</span>
+      <span><i style="background:var(--s-infra)"></i>Infrastructure</span>
       <span><i style="background:var(--c-ongoing)"></i>Ongoing situation</span>
       <span><i style="background:transparent;border:2px solid var(--c-reported)"></i>Hotspot: reported</span>
       <span><i style="background:transparent;border:2px solid var(--c-signal)"></i>Hotspot: signal</span>
@@ -161,8 +162,8 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
 <script src="vendor/topojson-client.min.js"></script>
 <script>
 const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue(k).trim();
-const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace', radar: 'Cloudflare Radar', ais: 'Shipping' };
-const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic','radar','ais'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
+const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace', radar: 'Cloudflare Radar', ais: 'Shipping', infra: 'Infrastructure' };
+const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic','radar','ais','infra'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
 const SCOL = s => SCOLS[s] || '#8796a6';
 const PAL = {};
 const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
