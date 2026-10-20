@@ -49,6 +49,8 @@ button { font: inherit; color: inherit; }
 .main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .globe-wrap { position: relative; background: radial-gradient(circle at 50% 45%, #13243a 0%, var(--bg) 70%); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; aspect-ratio: 1 / .86; }
 canvas { width: 100%; height: 100%; display: block; }
+.credits { color: var(--muted); font: 11px var(--f-mono); line-height: 1.7; padding: 18px 0 6px; }
+.credits a { color: inherit; }
 .legend { position: absolute; top: 10px; left: 10px; font: 11px var(--f-mono); color: var(--muted); z-index: 2; }
 .legend-btn { display: flex; align-items: center; gap: 6px; background: rgba(11,17,24,.72); border: 1px solid var(--line); border-radius: 14px; padding: 5px 10px; color: var(--muted); font: 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; backdrop-filter: blur(3px); }
 .legend-btn .dots { display: flex; gap: 3px; }
@@ -153,6 +155,7 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
   <section class="card" id="card"></section>
 </div>
 <section class="stream"><h3>Latest signals</h3><div id="latest"></div></section>
+<footer class="credits">Data: <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a> · <a href="https://ioda.inetintel.cc.gatech.edu/" target="_blank" rel="noopener">IODA</a> · <a href="https://radar.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Radar</a> · <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> · <a href="https://www.wikimedia.org/" target="_blank" rel="noopener">Wikimedia</a> · <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a> · <a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a> · aircraft from <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a> · places from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> and <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> · news from the outlets linked in each signal</footer>
 
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>

@@ -1,4 +1,4 @@
-"""Unfiltered ADS-B from adsb.lol (community feed, readsb JSON format).
+"""Unfiltered ADS-B from adsb.fi open data (community feed, readsb JSON format).
 
 - emergency squawks worldwide: 7500 hijack, 7600 radio failure, 7700 emergency
 - military aircraft, counted per 5-degree area per 15 minutes, so phase 2
@@ -48,21 +48,24 @@ def _db():
         if _con is None:
             _con = db.connect()
             _con.executescript(SCHEMA)
-            if not db.get_meta(_con, "airspace_provider_v2"):
-                # Regions moved to airplanes.live: start their history again on the new network
+            if not db.get_meta(_con, "airspace_provider_v3"):
+                # Regions moved to adsb.fi: start their history again on the new network
                 with db._lock:
                     _con.execute("DELETE FROM airspace")
                     _con.commit()
-                db.set_meta(_con, "airspace_provider_v2", int(time.time()))
+                db.set_meta(_con, "airspace_provider_v3", int(time.time()))
         return _con
 
 NAME = "adsb"
-BASE = "https://api.adsb.lol/v2"
-# Regions come from a second community network so one provider isn't asked for everything.
-# Always the same one: receiver coverage differs between networks, so mixing them would
-# look like traffic rising and falling.
-REGION_BASE = "https://api.airplanes.live/v2"
+# adsb.fi open data: non-commercial use, 1 request a second, credit adsb.fi with a link.
+# (adsb.lol rate-limited this server; airplanes.live asks to be contacted first.)
+# Always the same network for regions: receiver coverage differs between networks,
+# so switching would look like traffic rising and falling.
+BASE = "https://opendata.adsb.fi/api"
+REGION_BASE = BASE
 _cooldown = {}   # provider base -> unix time it may be asked again (also kept in the database across restarts)
+_pace_lock, _last_call = threading.Lock(), {}
+MIN_GAP = 1.5    # seconds between any two calls to the same host, across both jobs
 
 
 def polite_get(base, path, timeout):
@@ -74,6 +77,11 @@ def polite_get(base, path, timeout):
     wait = _cooldown[base] - time.time()
     if wait > 0:
         raise RuntimeError(f"rate limited by {base.split('/')[2]}, resting {int(wait // 60) + 1} more min")
+    with _pace_lock:   # squawks and regions run as separate jobs: keep them from overlapping
+        gap = _last_call.get(host, 0) + MIN_GAP - time.time()
+        if gap > 0:
+            time.sleep(gap)
+        _last_call[host] = time.time()
     try:
         return get(f"{base}{path}", timeout=timeout)
     except urllib.error.HTTPError as e:
@@ -106,7 +114,7 @@ def squawk_signals(aircraft, code, now):
             "source": NAME, "kind": "emergency_squawk" if code == "7500" else "squawk_routine",
             "lat": a["lat"], "lon": a["lon"],
             "title": f"Squawk {code} ({SQUAWKS[code]}): {flight}",
-            "url": f"https://adsb.lol/?icao={a.get('hex')}",
+            "url": f"https://globe.adsb.fi/?icao={a.get('hex')}",
             "score": 3 if code == "7500" else 1.5,
             "observed_at": now,
             "extra": {"hex": a.get("hex"), "type": a.get("t"), "alt": a.get("alt_baro")},
@@ -129,7 +137,7 @@ def military_signals(aircraft, now):
             "source": NAME, "kind": "military_air",
             "lat": la + 2.5, "lon": lo + 2.5,
             "title": f"{n} military aircraft broadcasting in this area",
-            "url": f"https://adsb.lol/?lat={la + 2.5}&lon={lo + 2.5}&zoom=6",
+            "url": f"https://globe.adsb.fi/?lat={la + 2.5}&lon={lo + 2.5}&zoom=6",
             "score": 0.5,  # presence only; baselines decide what is unusual
             "observed_at": now,
             "extra": {"count": n, "types": types},
@@ -170,7 +178,7 @@ def judge_region(name, lat, lon, aircraft, now, con):
                 "uid": f"adsb:drop:{name}:{now // 3600}", "source": NAME, "kind": "airspace_drop",
                 "lat": lat, "lon": lon, "place": name,
                 "title": f"Airspace emptying over {name}: {len(civil)} civil aircraft, usually about {round(base)} at this time",
-                "url": f"https://adsb.lol/?lat={lat}&lon={lon}&zoom=6", "score": 3.0, "observed_at": now,
+                "url": f"https://globe.adsb.fi/?lat={lat}&lon={lon}&zoom=6", "score": 3.0, "observed_at": now,
                 "extra": {"civil": len(civil), "usual": base, "region": name},
             })
     pastj = [r for r in usual(con, name, slot, "poor") if r["reporting"]]
@@ -194,11 +202,10 @@ def fetch():
     now = int(time.time())
     raws, signals = [], []
     for code in FETCH_SQUAWKS:
-        raw = polite_get(BASE, f"/sqk/{code}", 30)
-        time.sleep(1)
+        raw = polite_get(BASE, f"/v2/sqk/{code}", 30)
         raws.append(raw)
         signals += squawk_signals(parse_aircraft(raw), code, now)
-    raw = polite_get(BASE, "/mil", 60)
+    raw = polite_get(BASE, "/v2/mil", 60)
     raws.append(raw)
     signals += military_signals(parse_aircraft(raw), now)
     return b"\n".join(raws), signals
@@ -214,12 +221,12 @@ def fetch_regions(deadline_s=150):
             failed.append(f"{name}: skipped, out of time")
             continue
         try:
-            raw = polite_get(REGION_BASE, f"/point/{lat}/{lon}/{RADIUS_NM}", 20)
+            raw = polite_get(REGION_BASE, f"/v3/lat/{lat}/lon/{lon}/dist/{RADIUS_NM}", 20)
             raws.append(raw)
             signals += judge_region(name, lat, lon, parse_aircraft(raw), now, con)
         except Exception as e:   # one region failing shouldn't lose the rest
             failed.append(f"{name}: {e}")
-        time.sleep(2)   # airplanes.live asks for no more than one request a second
+
     with db._lock:
         con.execute("DELETE FROM airspace WHERE slot < ?", (now // 900 - 96 * 14,))
         con.commit()
