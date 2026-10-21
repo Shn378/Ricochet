@@ -119,6 +119,10 @@ M4+ abroad, so most places look quiet), so EMSC would help.
   Long-term: become a feeder (Raspberry Pi + aerial).
 - Next sources: EMSC seismic stream, Bluesky Jetstream (ws client exists), alerts.in.ua
   (needs token), US State Dept travel advisories, public Telegram previews (t.me/s/), OpenSky.
+- From the OSINT API list review (21 Oct): Wayback Machine "Save Page Now" for articles behind
+  Reported hotspots (link the archived copy too; respect its rate limits), and PeeringDB internet
+  exchange/data-centre locations as sensitive sites for outage cards. The rest of that list is
+  people/domain investigation tooling: out of scope and against our principles.
 - Story grouping by subject ("surge words"), finer gazetteer (≥1k), Wikipedia people pages
   without coordinates, scout leases (layer 3), promotion/demotion from audit scores.
 - Phase 3 investigator: an AI model reads articles behind hotspots (budget ~£2/day cap).
