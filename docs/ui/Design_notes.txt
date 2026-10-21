@@ -1,0 +1,20 @@
+A · Phone-first (5 screens). Each shows a different state:
+
+Tour (default): the globe sits on top and the Kramatorsk card is a sheet you can pull up. Below the globe are the 3 / 12 counter, Pause and a thin progress bar. A strip of the next card shows at the right edge so it’s obvious you can swipe.
+Card pulled up: the full card, with the sensitive-site line, signals grouped by feed with times and links, and the “nothing here is confirmed” note.
+Situations: the Sudan card with its 7-day bars against a dashed world-average line, then a separate natural hazards section for the cyclone.
+Watching & feeds: the Fort Campbell item plus two others, the feed chips (Aircraft is tapped to show its latest item), the latest signals and the data credits.
+“What am I looking at?”: the first-visit explainer, which the ? button reopens.
+
+B · Wall dashboard. Nothing scrolls. Ongoing situations and hazards are on the left, the large globe (with an open map key) and tour controls are in the middle, and the current card plus the up-next queue are on the right. Watching, latest signals and feed health run along the bottom. Text is 16–18px or larger so it reads from across a room.
+
+C · Stream / broadcast. The globe fills most of the frame, with a small brand bug top left and the clock top right. The lower-third shows the place, headline and confidence, a side stack lists what else is on the globe, and a signals ticker runs along the bottom. There are no controls.
+
+A few choices I made that you might want changed:
+
+Hazard colour: natural hazards use a lime green (
+#c5d86d), a colour the brief doesn’t use anywhere else. They also get a swirl icon and are labelled “not security incidents”.
+Shared globe: the globe is built once and reused in every layout, so changes to it apply everywhere.
+Map shading: Ukraine is shaded as ongoing as well as Sudan.
+Where the extra notes went: the “Expected: UK bonfire season” note sits on a West Yorkshire fires item in the wall queue. The sensitive-site line is on the Kramatorsk card (a rail station nearby).
+Sample content: all headlines, numbers and the cyclone name (TC 03S) are made up. They’re attributed to real outlets like Reuters, AP and the BBC, and the source links go to example.org. Swap in real reporting before this goes anywhere public.

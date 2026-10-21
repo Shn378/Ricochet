@@ -227,6 +227,14 @@ All three below are rules changes: replay against the benchmark set first, Shane
   bolted on. Mock up 2-3 layouts first (phone-first, wall dashboard, stream view) for Shane
   to choose, then build once. Must make room for natural hazards as their own category,
   ongoing situations, a "Watching" list and the health/credits/intro pieces.
+- **UI direction chosen (21 Oct):** Shane's design mockups are in `docs/ui/` (phone A1-A5,
+  wall dashboard B, stream C, shared globe, design notes). Build as one page with three modes:
+  phone (default on narrow screens, bottom tabs Tour/Situations/Watching/Signals/Feeds, card as
+  pull-up sheet), wall (?mode=wall or wide screens, nothing scrolls), stream (?mode=stream, no
+  controls, lower third + ticker). Hazards lime #c5d86d with swirl icon, labelled "not security
+  incidents". Mockup content is made up; drop things we don't have data for (GDELT DOC article
+  counts/tone, written "why" sentences until the AI investigator exists, rail-station site type),
+  and fix credits (adsb.fi, not OpenSky).
 - Order for Saturday: engine pass → benchmark → rule changes → UI mockups/build, with the
   quick-win sources fitted round them.
 
