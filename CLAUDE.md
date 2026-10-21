@@ -241,3 +241,22 @@ All three below are rules changes: replay against the benchmark set first, Shane
 - Order for Saturday: engine pass → benchmark → rule changes → UI mockups/build, with the
   quick-win sources fitted round them.
 
+
+### Google Cloud free tier (21 Oct; proposals, Shane to decide)
+
+- **The VM isn't on the free tier.** Free e2-micro (plus 30 GB *standard* disk, 1 GB/month
+  egress) only applies in us-west1, us-central1 or us-east1; ours is in europe-west2 (London),
+  hence the ~£6-9/month. Moving it (new VM in us-central1, rerun install, re-point the tunnel)
+  would make the VM itself free. Check first: whether the $300 new-account credit is what's
+  covering it now, the external IPv4 charge, and egress (site traffic through the tunnel counts;
+  above 1 GB/month is paid, so Cloudflare caching matters more once traffic grows).
+- **BigQuery (1 TiB queries + 10 GiB storage/month free).** GDELT is a public BigQuery dataset
+  (use the partitioned events tables to keep scans small). Uses: backfill and replay any
+  benchmark incident without downloading 15-min zips; rebuild the rolling 4-week baselines
+  from history; GKG/mentions for article counts and tone (dropped from the UI mockups for lack
+  of data). Needs a read-only service-account key in config.ini.
+- **Uptime check + email alert** (Cloud Monitoring) on ricochet.watch and /api/health, so Shane
+  hears if the site or feeds go down.
+- Minor/maybe: Natural Language API (5k units/month) for entity extraction on hotspot articles
+  only; Cloud Run functions as a cheap off-VM watchdog. Not needed: Cloud Storage (R2 is
+  bigger and has free egress), Firestore, Pub/Sub. Translation isn't on the free tier.
