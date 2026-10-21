@@ -235,6 +235,9 @@ All three below are rules changes: replay against the benchmark set first, Shane
   incidents". Mockup content is made up; drop things we don't have data for (GDELT DOC article
   counts/tone, written "why" sentences until the AI investigator exists, rail-station site type),
   and fix credits (adsb.fi, not OpenSky).
+  Decided: lime stays for hazards. Wall mode tours automatically; desktop/wall users can step
+  with left/right arrow keys (and click), which pauses the tour; it resumes after 60 s untouched
+  (phones keep the longer 3 min pause, since people read cards there).
 - Order for Saturday: engine pass → benchmark → rule changes → UI mockups/build, with the
   quick-win sources fitted round them.
 
