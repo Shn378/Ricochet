@@ -124,7 +124,9 @@ def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None, near
         return None, "fires only, away from conflict zones and sensitive sites", None
     active = [k for k, f in feeds.items() if above_normal(f)]
     if len(active) >= 2:
-        return "reported", f"{len(active)} feeds above their usual level, {', '.join(hot)} well above", None
+        learning = [k for k in active if not feeds[k].get("baseline")]
+        note = f" ({', '.join(learning)} still learning its normal level)" if learning else ""
+        return "reported", f"{', '.join(hot)} well above normal, {len(active) - 1} other feed(s) active{note}", None
     f = feeds[hot[0]]
     if f.get("baseline") and f["z"] < baseline.SOLO_Z.get(hot[0], 0):
         return None, f"{hot[0]} above normal but not enough on its own", None
