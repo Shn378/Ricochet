@@ -36,7 +36,7 @@ budget around a gym membership (suggested hard cap £2/day). Keep costs visible.
 | Code | GitHub `Shn378/Ricochet` (private). `main` deploys automatically. |
 | Server | Google Cloud VM `ricochet`, e2-micro, europe-west2 (London), Debian. About £6-9/month. |
 | Public site | Cloudflare Tunnel → `ricochet.watch` (domain on Cloudflare, ~$34/yr) |
-| Secrets | `~/ricochet/config.ini` on the VM only (FIRMS map key, Cloudflare Radar token, aisstream key). Never in git, never repeated in chat. |
+| Secrets | `~/ricochet/config.ini` on the VM only (FIRMS map key, Cloudflare Radar token, aisstream key, R2 bucket key). Never in git, never repeated in chat. |
 | Project brief | Claude Docs: "Ricochet — Project Brief" (concept, sourcing, lifecycle, evidence standards, positioning, replay log) |
 | Old laptop copy | HP laptop `C:\Users\shane\Desktop\Ricochet\ricochet` (pre-cloud, legacy) |
 
@@ -219,9 +219,10 @@ All three below are rules changes: replay against the benchmark set first, Shane
 - **Snapshot volume** (measured 21 Oct): ~210-230 MB/day of raw snapshots, ~3 GB on the VM at
   14 days. Likely mostly FIRMS (whole-day world file re-fetched every 30 min): store only new
   rows per fetch. R2 archive must stay selective: raw evidence behind hotspots + a daily signal
-  digest (est. a few hundred MB/month), not everything (~6.5 GB/month). R2 isn't enabled on
-  Shane's Cloudflare account yet (dashboard → R2; may ask for a card); then a bucket-scoped token
-  goes in the VM config.
+  digest (est. a few hundred MB/month), not everything (~6.5 GB/month). R2 is enabled (21 Oct),
+  bucket `ricochet-evidence` created (Standard, ENAM), and a bucket-scoped Object Read & Write
+  key is in the VM's config.ini under `[r2]` (account, bucket, access_key, secret_key).
+  Saturday: build the uploader (S3-compatible, SigV4 in stdlib) to use it.
 - **UI pass.** The layout dates from the "globe + one card" stream idea and has had a lot
   bolted on. Mock up 2-3 layouts first (phone-first, wall dashboard, stream view) for Shane
   to choose, then build once. Must make room for natural hazards as their own category,
