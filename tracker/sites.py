@@ -131,7 +131,7 @@ def tag_and_filter(con, signals):
     unless they're on one."""
     out = []
     for s in signals:
-        if s["source"] in ("firms", "wiki"):
+        if s["source"] in ("firms", "wiki", "seismic"):
             site = near(con, s.get("lat"), s.get("lon"))
             if site and s["source"] == "wiki":
                 # A Wikipedia burst counts as "at the site" only when the article is about the

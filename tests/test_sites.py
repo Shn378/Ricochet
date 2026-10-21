@@ -185,3 +185,17 @@ class AuditFixesTest(unittest.TestCase):
         with mock.patch.object(sites, "near", return_value=dict(base)):
             out = sites.tag_and_filter(None, [{"source": "wiki", "lat": 52.8, "lon": -110.9, "place": "CFB Wainwright", "title": "x"}])
         self.assertIn("site", out[0]["extra"])
+
+
+class LoneSeismicTest(unittest.TestCase):
+    q = staticmethod(lambda obs=2.5: {"seismic": {"observed": obs, "expected": 0, "z": obs, "elevated": True, "baseline": False}})
+
+    def test_natural_quake_far_from_conflict_stays_a_dot(self):
+        from tracker import rules
+        self.assertIsNone(rules.decide(self.q(), "37:95", {}, {}, {"UA"}, [])[0])
+
+    def test_near_conflict_or_site_or_huge_still_shows(self):
+        from tracker import rules
+        self.assertEqual(rules.decide(self.q(), "48:37", {}, {}, {"UA"}, [])[0], "signal")
+        self.assertEqual(rules.decide(self.q(), "37:95", {}, {"seismic": {"name": "Lop Nur", "kind": "military installation"}}, {"UA"}, [])[0], "signal")
+        self.assertEqual(rules.decide(self.q(6.0), "41:129", {}, {}, {"UA"}, [])[0], "signal")

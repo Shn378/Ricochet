@@ -216,7 +216,7 @@
   },
   {
    "name": "Radio Okapi",
-   "url": "https://www.radiookapi.net/rss.xml",
+   "url": "https://feeds.feedburner.com/radiookapi/actu?format=xml",
    "country": "CD"
   },
   {
@@ -259,6 +259,13 @@
    "url": "https://www.gov.uk/government/organisations/ministry-of-defence.atom",
    "country": "GB",
    "type": "official"
+  },
+  {
+   "name": "Al Arabiya (EN)",
+   "url": "https://english.alarabiya.net/feed/rss2/en.xml",
+   "country": null,
+   "probation": true,
+   "since": "2026-10-21"
   }
  ]
 }

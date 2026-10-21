@@ -115,6 +115,11 @@ def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None, near
             return "watch", f"fire at {site['name']} ({site['kind']}), waiting for a second source", site
         level = "reported" if len(active) >= 2 else "signal"
         return level, f"{at_site[0]} above normal at {site['name']} ({site['kind']})", site
+    # Lone seismic events (natural quakes in odd places, mislabelled blasts) stay as map dots
+    # unless they're near a conflict or a sensitive site, or big enough to be a nuclear test
+    if hot == ["seismic"] and "seismic" not in sites_by_source and feeds["seismic"].get("observed", 0) < 5 \
+            and not in_conflict(cell, expected, hot_countries):
+        return None, "seismic event alone, away from conflict zones and sensitive sites", None
     if hot == ["firms"] and not in_conflict(cell, expected, hot_countries):
         return None, "fires only, away from conflict zones and sensitive sites", None
     active = [k for k, f in feeds.items() if above_normal(f)]
