@@ -216,6 +216,12 @@ All three below are rules changes: replay against the benchmark set first, Shane
   remove laptop-era leftovers (Windows take-over code, one-off migrations, old splash styles,
   .bat files if the HP is retired); cache expectations and country lookups for the e2-micro;
   add server/API tests.
+- **Snapshot volume** (measured 21 Oct): ~210-230 MB/day of raw snapshots, ~3 GB on the VM at
+  14 days. Likely mostly FIRMS (whole-day world file re-fetched every 30 min): store only new
+  rows per fetch. R2 archive must stay selective: raw evidence behind hotspots + a daily signal
+  digest (est. a few hundred MB/month), not everything (~6.5 GB/month). R2 isn't enabled on
+  Shane's Cloudflare account yet (dashboard → R2; may ask for a card); then a bucket-scoped token
+  goes in the VM config.
 - **UI pass.** The layout dates from the "globe + one card" stream idea and has had a lot
   bolted on. Mock up 2-3 layouts first (phone-first, wall dashboard, stream view) for Shane
   to choose, then build once. Must make room for natural hazards as their own category,
