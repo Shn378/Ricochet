@@ -207,3 +207,19 @@ All three below are rules changes: replay against the benchmark set first, Shane
   a card of latest headlines, so chronic crises stay visible without beating the baseline.
 - **Check Haiti.** It wasn't in the 21 Oct Ongoing list; may lack GDELT volume (situations.py
   MIN_TOTAL 400) and be falling through both nets.
+
+### Optimisation passes (21 Oct; Saturday, before the benchmark)
+
+- **Engine pass first.** Make replay and live share one decision path (replay currently skips
+  the known-events calendar and the ongoing-country test), so benchmark results are trustworthy.
+  Pull repeated logic (above-normal, conflict test, lead feed, site tagging) into one place;
+  remove laptop-era leftovers (Windows take-over code, one-off migrations, old splash styles,
+  .bat files if the HP is retired); cache expectations and country lookups for the e2-micro;
+  add server/API tests.
+- **UI pass.** The layout dates from the "globe + one card" stream idea and has had a lot
+  bolted on. Mock up 2-3 layouts first (phone-first, wall dashboard, stream view) for Shane
+  to choose, then build once. Must make room for natural hazards as their own category,
+  ongoing situations, a "Watching" list and the health/credits/intro pieces.
+- Order for Saturday: engine pass → benchmark → rule changes → UI mockups/build, with the
+  quick-win sources fitted round them.
+
