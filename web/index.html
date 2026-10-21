@@ -221,7 +221,7 @@ async function showFeed(k, quiet) {
   if (!k) { box.innerHTML = ''; return; }
   if (!quiet) box.innerHTML = '<p class="hnote">Loading…</p>';
   try {
-    const d = await getJSON(`/api/signals?source=${encodeURIComponent(FEED_SOURCE[k] || k)}&hours=72&limit=12`);
+    const d = await getJSON(`/api/signals?feed=${encodeURIComponent(FEED_SOURCE[k] || k)}&hours=72&limit=12`);
     const list = d.signals.filter(s => k !== 'airspace' || /airspace|jamming/.test(s.kind));
     box.innerHTML = `<div class="sec-label">${esc(SRC[k] || k)} · latest (72 hours)</div>
       <p class="hnote">${esc(healthMsgs[k] || '')}</p>` + (list.length ? list.map(s => `<div class="sig"><time>${new Date(s.observed_at * 1000).toISOString().slice(5, 16).replace('T', ' ')}Z</time><i style="background:${SCOL(s.source)}"></i><span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)}</span></div>`).join('') : '<p class="empty">Nothing from this feed in the last 72 hours.</p>');

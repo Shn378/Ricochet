@@ -130,7 +130,10 @@ def _hotspots(con, hours=6, limit=40, debug=None):
         expected_event = None
         if level in ("signal", "reported"):
             active = [s for s, f in feeds.items() if rules.above_normal(f)] or hot
-            expected_event = known_events.match(time.time(), _country_of(cell, items), active)
+            # The note only applies when the feed driving the hotspot is one the event explains:
+            # bonfire season explains fires, not a Google Cloud outage in London.
+            lead = max(hot or active, key=lambda s: feeds[s].get("z", 0))
+            expected_event = known_events.match(time.time(), _country_of(cell, items), [lead])
             if expected_event:
                 unexplained = [s for s in active if s not in expected_event["feeds"]]
                 if level == "reported" and not unexplained:
@@ -257,9 +260,10 @@ class Handler(SimpleHTTPRequestHandler):
                 since = int(time.time()) - int(q.get("hours", 24)) * 3600
                 if q.get("cell"):
                     data = rows(self.con, "SELECT * FROM signals WHERE cell=? AND observed_at>=? ORDER BY observed_at", (q["cell"], since))
-                elif q.get("source"):   # latest signals from one feed, for the health panel
+                elif q.get("feed") or q.get("source"):   # latest signals from one feed, for the health panel
+                    # ("feed" as well as "source": some fetch tools strip ?source= as a tracking parameter)
                     data = rows(self.con, "SELECT * FROM signals WHERE source=? AND observed_at>=? ORDER BY observed_at DESC LIMIT ?",
-                                (q["source"], since, min(int(q.get("limit", 10)), 50)))
+                                (q.get("feed") or q["source"], since, min(int(q.get("limit", 10)), 50)))
                 elif q.get("country"):
                     data = rows(self.con, "SELECT * FROM signals WHERE country=? AND source='gdelt' AND observed_at>=? ORDER BY observed_at DESC LIMIT 200", (q["country"], since))
                 else:

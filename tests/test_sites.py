@@ -165,3 +165,23 @@ class ConfidenceTest(unittest.TestCase):
         self.assertGreater(hi, lo)
         self.assertLess(confidence("reported", two, None, {"name": "x"}), hi)
         self.assertEqual(confidence("watch", one, None, None), 5)
+
+
+class AuditFixesTest(unittest.TestCase):
+    def test_wiki_city_page_next_to_base_is_not_at_site(self):
+        from tracker import sites
+        from unittest import mock
+        base = {"qid": "Q1", "name": "Larissa Air Base", "kind": "air base", "km": 3}
+        with mock.patch.object(sites, "near", return_value=dict(base)):
+            city = sites.tag_and_filter(None, [{"source": "wiki", "lat": 39.6, "lon": 22.4, "place": "Larissa", "title": "Edit burst: Larissa"}])
+            own = sites.tag_and_filter(None, [{"source": "wiki", "lat": 39.6, "lon": 22.4, "place": "Larissa Air Base", "title": "Edit burst: Larissa Air Base"}])
+        self.assertNotIn("site", city[0].get("extra", {}))
+        self.assertIn("site", own[0]["extra"])
+
+    def test_wainwright_article_still_counts(self):
+        from tracker import sites
+        from unittest import mock
+        base = {"qid": "Q2", "name": "Wainwright Regional Training Area", "kind": "military base", "km": 2}
+        with mock.patch.object(sites, "near", return_value=dict(base)):
+            out = sites.tag_and_filter(None, [{"source": "wiki", "lat": 52.8, "lon": -110.9, "place": "CFB Wainwright", "title": "x"}])
+        self.assertIn("site", out[0]["extra"])

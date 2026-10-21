@@ -108,5 +108,5 @@ def to_signals(items, feed, now):
 def fetch(feed, now):
     raw = get(feed["url"], timeout=30)
     items = parse_feed(raw)
-    newest = max((i["published"] for i in items if i["published"]), default=None)
+    newest = max((min(i["published"], now) for i in items if i["published"]), default=None)   # some feeds stamp local time as UTC
     return raw, items, to_signals(items, feed, now), newest

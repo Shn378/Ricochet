@@ -11,6 +11,7 @@ gas flares that burn every day stay quiet.
 """
 import json
 import math
+import re
 import threading
 import time
 import urllib.parse
@@ -132,6 +133,14 @@ def tag_and_filter(con, signals):
     for s in signals:
         if s["source"] in ("firms", "wiki"):
             site = near(con, s.get("lat"), s.get("lon"))
+            if site and s["source"] == "wiki":
+                # A Wikipedia burst counts as "at the site" only when the article is about the
+                # site itself, not the town next to it (Larissa city page next to the air base)
+                # ("CFB Wainwright" counts for Wainwright Regional Training Area; plain "Larissa" doesn't for Larissa Air Base)
+                from .rules import GENERIC, site_words
+                words = set(re.findall(r"[a-z]+", (s.get("place") or s.get("title") or "").lower()))
+                if not (site_words(site["name"]) & words and words & GENERIC):
+                    site = None
             if site:
                 s.setdefault("extra", {})["site"] = site
             if s["source"] == "firms":
