@@ -5,10 +5,6 @@ Then open:   http://localhost:8765
 """
 import configparser
 import os
-import re
-import socket
-import subprocess
-import urllib.request
 import threading
 import time
 import traceback
@@ -66,7 +62,9 @@ def poller(con, name, fn, every_minutes):
         try:
             raw, signals = fn()
             signals = sites.tag_and_filter(con, signals)
-            snap, sha = db.save_snapshot(name, raw)
+            # Keep the raw reply only when it brought something new: it's the evidence behind
+            # those signals. Unchanged replies (most quake, status and fire polls) aren't stored.
+            snap, sha = db.save_snapshot(name, raw) if db.has_new(con, signals) else (None, None)
             added = db.add_signals(con, signals, snap, sha)
             if name == "gdelt" and gdelt.LAST_COUNTS.get("_slot") and gdelt.LAST_COUNTS["_slot"] != db.get_meta(con, "last_slot:gdelt"):
                 slot_ts = int(datetime.strptime(gdelt.LAST_COUNTS["_slot"].rsplit("/", 1)[-1][:14], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc).timestamp())
@@ -124,42 +122,8 @@ def housekeeping(con, keep_days):
         time.sleep(6 * 3600)
 
 
-def port_busy(port):
-    with socket.socket() as s:
-        s.settimeout(1)
-        return s.connect_ex(("127.0.0.1", port)) == 0
-
-
-def take_over(port):
-    """If an older Ricochet is already running, stop it so this one can start.
-    Means restarting is just: run start.bat again."""
-    if not port_busy(port):
-        return
-    log("An older Ricochet is running; stopping it first")
-    try:
-        urllib.request.urlopen(f"http://127.0.0.1:{port}/api/shutdown", timeout=3).read()
-    except Exception:
-        pass
-    for _ in range(10):
-        time.sleep(0.5)
-        if not port_busy(port):
-            return
-    if os.name == "nt":  # older versions had no shutdown address: end that process directly
-        try:
-            out = subprocess.run(["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True, timeout=10).stdout
-            for line in out.splitlines():
-                m = re.search(rf"127\.0\.0\.1:{port}\s+\S+\s+LISTENING\s+(\d+)", line) or re.search(rf"0\.0\.0\.0:{port}\s+\S+\s+LISTENING\s+(\d+)", line)
-                if m and int(m.group(1)) != os.getpid():
-                    subprocess.run(["taskkill", "/PID", m.group(1), "/F"], capture_output=True, timeout=10)
-                    log(f"Stopped the older engine (process {m.group(1)})")
-        except Exception as e:
-            log(f"Couldn't stop the older engine: {e}")
-        time.sleep(1)
-
-
 def main():
     cfg = load_config()
-    take_over(cfg.getint("general", "port"))
     con = db.connect()
     db.rescore_ioda(con)
     db.migrate_v2(con)
@@ -207,6 +171,9 @@ def main():
     threading.Thread(target=housekeeping, args=(con, cfg.getint("general", "keep_days")), daemon=True).start()
     from . import benchmark
     threading.Thread(target=benchmark.runner, args=(log,), daemon=True, name="benchmark").start()
+    from . import archive, server as srv
+    threading.Thread(target=archive.runner, args=(cfg, lambda c: srv.hotspots(c, 6, 200, watch=True), log),
+                     daemon=True, name="archive").start()
     port = cfg.getint("general", "port")
     log(f"Ricochet running (Tripwire engine). Open http://localhost:{port}")
     try:

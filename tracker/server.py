@@ -233,10 +233,6 @@ class Handler(SimpleHTTPRequestHandler):
                 for d in data:
                     d["extra"] = json.loads(d["extra"] or "{}")
                 return self._json({"now": int(time.time()), "signals": data})
-            if u.path == "/api/shutdown" and self._local():
-                self._json({"ok": True, "message": "Ricochet stopping"})
-                threading.Timer(0.5, lambda: os._exit(0)).start()
-                return
             if u.path == "/api/benchmark":   # rule-change scoreboard (tracker/benchmark.py)
                 from . import benchmark
                 try:

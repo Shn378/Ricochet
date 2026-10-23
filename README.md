@@ -18,29 +18,15 @@ Built to run lean on an old laptop. It uses plain Python with no extra packages,
 
 A **hotspot** opens when two different feeds agree in the same 1° area, or when one feed fires strongly. Everything stays at Signal or Reported. Nothing is labelled Confirmed until the investigator agent and human review exist (phases 3 and 4).
 
-## First-time setup (Windows)
+## Running it
 
-1. Install Python 3.10 or newer from python.org. Tick **"Add python.exe to PATH"**.
-2. Unzip this folder somewhere permanent, for example `Documents\conflict-tracker`.
-3. Double-click **`check.bat`**. It tests every feed once and shows which work.
-4. Double-click **`start.bat`**, then open http://localhost:8765.
+Ricochet runs on a small Linux server (see `CLAUDE.md` for where and how it deploys).
+To set up a fresh server: clone the repo, then `sudo bash deploy/install.sh`. It installs
+the services, asks for the FIRMS map key and installs cloudflared for the Cloudflare Tunnel.
+Keys live only in `config.ini` on the server (template: `config.example.ini`).
 
-### FIRMS heat data (optional, free)
-
-Get a map key at https://firms.modaps.eosdis.nasa.gov/api/map_key. It only needs an email address. Then put it in `config.ini`:
-
-```
-[firms]
-map_key = your_key_here
-```
-
-### Viewing it from another screen in the house
-
-In `config.ini`, set `host = 0.0.0.0` under `[general]`. Then open `http://<laptop-ip>:8765` on the other device. Windows will ask to allow Python through the firewall; allow it on **private networks only**.
-
-### Start automatically
-
-Press Win+R, type `shell:startup`, and put a shortcut to `start.bat` in that folder.
+To run it locally for testing: `python3 -m tracker.check` tests every feed once, and
+`python3 -m tracker.run` starts it at http://localhost:8765.
 
 ## Splash screen
 

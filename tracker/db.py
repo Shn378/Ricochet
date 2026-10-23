@@ -166,6 +166,17 @@ def save_snapshot(source, payload: bytes):
     return os.path.relpath(path, DATA).replace("\\", "/"), sha
 
 
+def has_new(con, signals):
+    """Does this batch contain any signal not stored yet? (Only then is the raw reply worth keeping.)"""
+    uids = [s["uid"] for s in signals if s.get("uid")]
+    for i in range(0, len(uids), 500):
+        chunk = uids[i:i + 500]
+        seen = con.execute(f"SELECT COUNT(*) FROM signals WHERE uid IN ({','.join('?' * len(chunk))})", chunk).fetchone()[0]
+        if seen < len(set(chunk)):
+            return True
+    return False
+
+
 def add_signals(con, signals, snapshot=None, sha=None):
     """Insert signals, skipping ones already seen. New ones also feed the hourly buckets.
     Returns number added."""

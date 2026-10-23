@@ -144,7 +144,7 @@ class Budget:
                 for sg in sigs:
                     sg["kind"] = "probation_report"
                     sg.setdefault("extra", {})["probation"] = True
-            snap, sha = db.save_snapshot("news", raw)
+            snap, sha = db.save_snapshot("news", raw) if db.has_new(self.con, sigs) else (None, None)
             added = db.add_signals(self.con, sigs, snap, sha)
             with db._lock:
                 self.con.execute("""UPDATE sources SET last_checked=?, last_ok=?, fails=0, last_error=NULL, status='active',

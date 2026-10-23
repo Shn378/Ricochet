@@ -38,7 +38,7 @@ budget around a gym membership (suggested hard cap £2/day). Keep costs visible.
 | Public site | Cloudflare Tunnel → `ricochet.watch` (domain on Cloudflare, ~$34/yr) |
 | Secrets | `~/ricochet/config.ini` on the VM only (FIRMS map key, Cloudflare Radar token, aisstream key, R2 bucket key). Never in git, never repeated in chat. |
 | Project brief | Claude Docs: "Ricochet — Project Brief" (concept, sourcing, lifecycle, evidence standards, positioning, replay log) |
-| Old laptop copy | HP laptop `C:\Users\shane\Desktop\Ricochet\ricochet` (pre-cloud, legacy) |
+| Old laptop copy | HP laptop `C:\Users\shane\Desktop\Ricochet\ricochet` (pre-cloud, legacy; Windows start scripts removed 23 Oct) |
 
 ## Deploying
 
@@ -58,7 +58,7 @@ caches pages for 15 minutes:
 (use `feed=`, not `source=`: the web-fetch tool strips `source` as a tracking parameter),
 `/api/health`, `/api/sources`, `/api/situations?all=1`, `/api/near` (tuning), `/api/benchmark`.
 The workspace can also reach the live API with curl (no web-fetch quota).
-`/api/replay` and `/api/shutdown` only answer genuine local requests on the server.
+`/api/replay` only answers genuine local requests on the server.
 
 ## How it works (code map)
 

@@ -66,12 +66,37 @@ def fetch_day(key, day):
     return out
 
 
+def recent_rows(csv_bytes, hours=6, now=None):
+    """The CSV header plus detections from the last few hours. The world file holds the
+    whole day and is re-fetched every 30 minutes; only recent passes can make new clusters,
+    so only they are worth archiving."""
+    lines = csv_bytes.split(b"\n")
+    if not lines:
+        return csv_bytes
+    head = lines[0].decode("utf-8", "replace").strip().split(",")
+    try:
+        di, ti = head.index("acq_date"), head.index("acq_time")
+    except ValueError:
+        return csv_bytes
+    cutoff = (now or datetime.now(timezone.utc).timestamp()) - hours * 3600
+    keep = [lines[0]]
+    for ln in lines[1:]:
+        parts = ln.decode("utf-8", "replace").split(",")
+        try:
+            t = datetime.strptime(f"{parts[di]} {int(parts[ti]):04d}", "%Y-%m-%d %H%M").replace(tzinfo=timezone.utc).timestamp()
+        except (IndexError, ValueError):
+            continue
+        if t >= cutoff:
+            keep.append(ln)
+    return b"\n".join(keep)
+
+
 def fetch(key):
     if not key:
         raise RuntimeError("No FIRMS map key set in config.ini (free from firms.modaps.eosdis.nasa.gov/api/map_key)")
     raws, signals = [], []
     for src in SOURCES:
         raw = get(API.format(key=key, source=src, date=""), timeout=120)
-        raws.append(raw)
+        raws.append(recent_rows(raw))
         signals += parse(raw, src)
     return b"\n".join(raws), signals
