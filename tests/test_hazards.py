@@ -40,6 +40,16 @@ class Hazards(unittest.TestCase):
     def test_old_items_dropped(self):
         self.assertEqual(hazards.parse_gdacs(GDACS, now=NOW + 30 * 86400), [])
 
+    def test_metoffice_region_pins(self):
+        rss = b"""<rss><channel><pubDate>Fri, 23 Oct 2026 23:01:01 GMT</pubDate>
+        <item><title>Amber warning of wind affecting Dumfries, Galloway, Lothian &amp; Borders</title><link>https://m/1</link><guid>g1</guid></item>
+        <item><title>Yellow warning of rain affecting Somewhere New</title><link>https://m/2</link><guid>g2</guid></item>
+        </channel></rss>"""
+        sigs = hazards.parse_metoffice(rss, now=NOW)
+        self.assertEqual(len(sigs), 1)                 # unknown region: no pin rather than a wrong one
+        self.assertEqual(sigs[0]["extra"]["alert"], "amber")
+        self.assertAlmostEqual(sigs[0]["lat"], 55.4)
+
     def test_every_kind_is_context_only(self):
         # Until Shane decides otherwise, hazards never count towards a hotspot
         self.assertTrue(hazards.KINDS <= db.CONTEXT_KINDS)
