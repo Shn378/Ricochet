@@ -14,8 +14,10 @@ Each variant (current rules, each switch in rules.FLAGS alone, all switches) is 
 Runs on the server after each deploy and nightly; results at /api/benchmark.
 Usage on the server: python3 -m tracker.benchmark
 """
+import bisect
 import json
 import os
+import threading
 import statistics
 import time
 from collections import defaultdict
@@ -153,41 +155,52 @@ def score_incident(inc, snap, flags):
 
 
 def noise(con, variants, log=print):
-    """Hotspots each variant would have opened over the last few days, hour by hour."""
+    """Hotspots each variant would have opened over the last few days, hour by hour.
+    Everything that doesn't depend on the variant (the window's signals, normal levels,
+    nearby text) is worked out once per hour and shared, which keeps the e2-micro sane."""
     now = (int(time.time()) // 3600) * 3600
     since = now - NOISE_DAYS * 86400
-    rows = [dict(r) for r in con.execute(
-        "SELECT source, kind, cell, score, title, url, extra, observed_at, fetched_at, country, place FROM signals "
-        "WHERE observed_at > ? AND cell IS NOT NULL", (since - WINDOW,))]
-    rows = [r for r in rows if r["kind"] not in db.CONTEXT_KINDS]
+    rows = []
+    for r in con.execute(
+            "SELECT source, kind, cell, score, title, url, extra, observed_at, fetched_at, country, place FROM signals "
+            "WHERE observed_at > ? AND cell IS NOT NULL ORDER BY observed_at", (since - WINDOW,)):
+        r = dict(r)
+        if r["kind"] in db.CONTEXT_KINDS:
+            continue
+        site = rules._extra(r).get("site")
+        r["extra"] = {"site": site} if site else {}     # parse once, not once per evaluation
+        rows.append(r)
+    obs = [r["observed_at"] for r in rows]
     opened = {v: {} for v in variants}
     hot_by_day = {}
     for t in range(since, now + 1, 3600):
-        live = [r for r in rows if r["fetched_at"] <= t and t - WINDOW < r["observed_at"] <= t]
+        lo, hi = bisect.bisect_right(obs, t - WINDOW), bisect.bisect_right(obs, t)
+        live = [r for r in rows[lo:hi] if r["fetched_at"] <= t]
         if not live:
             continue
         by_cell = defaultdict(list)
+        texts = defaultdict(list)
         for r in live:
             by_cell[r["cell"]].append(r)
-        cells = sorted(by_cell)
-        exps = {m: baseline.expectations(con, 6, now=t, cells=cells, median=m) for m in (False, True)}
+            texts[r["cell"]].append((r["source"], f"{r.get('title') or ''} {r.get('url') or ''}"))
+        nearby = {cell: [x for n in around(cell) for x in texts.get(n, ())] for cell in by_cell}
+        exps, history = baseline.expectations_both(con, 6, now=t, cells=sorted(by_cell))
         day = t // 86400
         if day not in hot_by_day:
             h = _hot_cc(con, t)
             hot_by_day[day] = set(h) if h is not None else None
-        texts = defaultdict(list)
-        for r in live:
-            texts[r["cell"]].append((r["source"], f"{r.get('title') or ''} {r.get('url') or ''}"))
         for v, flags in variants.items():
-            expected, history = exps[bool(flags.get("median_baseline"))]
+            expected = exps["median" if flags.get("median_baseline") else "mean"]
             for cell, items in by_cell.items():
-                ev = rules.evaluate(cell, items, expected, history, hot_by_day[day],
-                                    [x for n in around(cell) for x in texts.get(n, ())], now=t, flags=flags)
-                if ev["level"] in ("signal", "reported") and (cell, day) not in opened[v]:
+                if (cell, day) in opened[v]:
+                    continue        # already counted today: only the first opening matters
+                ev = rules.evaluate(cell, items, expected, history, hot_by_day[day], nearby[cell], now=t, flags=flags)
+                if ev["level"] in ("signal", "reported"):
                     best = max(items, key=lambda s: s["score"] or 1)
                     opened[v][(cell, day)] = {"cell": cell, "day": iso(day * 86400)[:10], "level": ev["level"],
                                               "place": next((s["place"] for s in items if s.get("place")), None),
                                               "headline": (best.get("title") or "")[:140], "reason": ev["reason"]}
+        time.sleep(0.05)     # let the live engine have the CPU between hours
     return opened
 
 
@@ -271,6 +284,10 @@ def due(con):
 
 def runner(log=print, delay=600):
     """Background loop in the engine: wait for things to settle after a start, then run when due."""
+    try:    # lowest CPU priority for this thread only (Linux), so the live site always wins
+        os.setpriority(os.PRIO_PROCESS, threading.get_native_id(), 19)
+    except (AttributeError, OSError):
+        pass
     time.sleep(delay)
     con = db.connect()
     while True:

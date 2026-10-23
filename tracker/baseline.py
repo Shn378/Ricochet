@@ -151,6 +151,13 @@ def expectations(con, window_hours, now=None, cells=None, median=False):
     now: judge as at this time (replays and the benchmark); cells: only these squares
     (plus neighbours for fires); median: the typical day over the 4 weeks kept, so one
     terrible week doesn't raise the bar for a month."""
+    both, hist = expectations_both(con, window_hours, now=now, cells=cells)
+    return both["median" if median else "mean"], hist
+
+
+def expectations_both(con, window_hours, now=None, cells=None):
+    """Mean and median expectations from one pass over the buckets (the benchmark needs both).
+    Returns ({"mean": exp, "median": exp}, hist)."""
     now_hour = int(now or time.time()) // 3600
     end = now_hour - window_hours + 1          # first hour of the recent window
     hist, days = {}, {}
@@ -166,7 +173,7 @@ def expectations(con, window_hours, now=None, cells=None, median=False):
     if want and len(want) > 3000:   # SQLite caps the number of parameters: just read everything
         want = None
     cell_sql = f" AND cell IN ({','.join('?' * len(want))})" if want else ""
-    exp = defaultdict(float)
+    out = {"mean": defaultdict(float), "median": defaultdict(float)}
     q = f"""SELECT cell, (? - hour) / 24 AS d, SUM(score) AS total FROM buckets
            WHERE hour < ? AND hour >= ? - 24 * ? AND ((? - hour) % 24) < ?
              AND source = ?{cell_sql} GROUP BY cell, d"""
@@ -177,22 +184,21 @@ def expectations(con, window_hours, now=None, cells=None, median=False):
         for r in con.execute(q, (now_hour, end, now_hour, d, now_hour, window_hours, s, *(sorted(want) if want else ()))):
             per_cell[r["cell"]].append(r["total"])
         for c, totals in per_cell.items():
-            if median:
-                vals = sorted(totals + [0.0] * max(0, d - len(totals)))
-                m = len(vals) // 2
-                exp[(c, s)] = vals[m] if len(vals) % 2 else (vals[m - 1] + vals[m]) / 2
-            else:
-                exp[(c, s)] = sum(totals) / d
+            vals = sorted(totals + [0.0] * max(0, d - len(totals)))
+            m = len(vals) // 2
+            out["median"][(c, s)] = vals[m] if len(vals) % 2 else (vals[m - 1] + vals[m]) / 2
+            out["mean"][(c, s)] = sum(totals) / d
     # Fires: a square inside a burning region inherits the region's normal level
-    for s in NEIGHBOUR_SOURCES:
-        own = {c: v for (c, src), v in exp.items() if src == s}
-        for c in list(own):
-            la, lo = map(int, c.split(":"))
-            for dla in (-1, 0, 1):
-                for dlo in (-1, 0, 1):
-                    n = f"{la + dla}:{lo + dlo}"
-                    exp[(n, s)] = max(exp.get((n, s), 0.0), own[c] * 0.75)
-    return exp, hist
+    for exp in out.values():
+        for s in NEIGHBOUR_SOURCES:
+            own = {c: v for (c, src), v in exp.items() if src == s}
+            for c in list(own):
+                la, lo = map(int, c.split(":"))
+                for dla in (-1, 0, 1):
+                    for dlo in (-1, 0, 1):
+                        n = f"{la + dla}:{lo + dlo}"
+                        exp[(n, s)] = max(exp.get((n, s), 0.0), own[c] * 0.75)
+    return out, hist
 
 
 def judge(observed, expected, source, history):
