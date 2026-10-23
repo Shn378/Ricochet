@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ricochet</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Ricochet v2: one page, three modes (docs/ui).
+   phone  = default on narrow screens: globe on top, card as a pull-up sheet, bottom tabs
+   wall   = ?mode=wall or wide screens: nothing scrolls, readable across a room
+   stream = ?mode=stream: no controls, lower third, side stack and ticker */
+:root {
+  color-scheme: dark;
+  --bg: #0b1118; --panel: #111a24; --panel-2: #16212e; --line: #233243;
+  --fg: #dfe7ee; --muted: #8796a6; --ocean: #0f1d2b; --land: #253546; --border-c: #3a4d61;
+  --accent: #e9b44c;
+  --c-signal: #7f9bb5; --c-reported: #e9b44c; --c-ongoing: #d9785a; --c-hazard: #c5d86d;
+  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7; --s-radar: #d29df0; --s-ais: #4f8fe0; --s-infra: #e06c9f; --s-hazard: #c5d86d;
+  --ok: #46b37b; --warn: #e9b44c; --bad: #e5484d;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); }
+a { color: var(--fg); text-decoration-color: var(--muted); text-underline-offset: 2px; }
+a:hover { text-decoration-color: var(--accent); }
+button { font: inherit; color: inherit; cursor: pointer; }
+[hidden] { display: none !important; }
+.mono { font-family: var(--f-mono); }
+.label { font: 11px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.empty { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* ---------- Shared pieces ---------- */
+.brand { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: .16em; text-transform: uppercase; line-height: 1; white-space: nowrap; }
+svg.o { display: inline-block; width: .7em; height: .7em; vertical-align: 0; margin: 0 .04em 0 .02em; overflow: visible; }
+svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; animation: ping 2.8s ease-out 1.2s infinite; }
+@keyframes ping { 0% { opacity: .9; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(3.2); } }
+.live { font: 12px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; border: 1px solid var(--line); padding: 5px 12px; border-radius: 20px; display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.clock { font: 500 18px var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.help { background: none; border: 1.5px solid var(--muted); color: var(--fg); border-radius: 50%; width: 30px; height: 30px; font: 600 15px var(--f-body); flex: none; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.pill { font: 11px var(--f-mono); text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--line); display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.pill.lvl-reported { color: var(--c-reported); border-color: var(--c-reported); background: rgba(233,180,76,.08); }
+.pill.lvl-signal { color: var(--c-signal); border-color: var(--c-signal); }
+.pill.lvl-watch { color: var(--muted); }
+.pill.lvl-ongoing, .pill.lvl-escalating { color: var(--bg); background: var(--c-ongoing); border-color: var(--c-ongoing); }
+.pill.hz { color: var(--c-hazard); border-color: var(--c-hazard); }
+.pill.hz-red { color: #fff; background: #c8423b; border-color: #c8423b; }
+.pill.hz-orange { color: #111; background: #e39a3b; border-color: #e39a3b; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sig { display: grid; grid-template-columns: 52px 10px 1fr; gap: 8px; align-items: baseline; padding: 5px 0; font-size: 13.5px; }
+.sig + .sig { border-top: 1px solid var(--line); }
+.sig time { font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sig i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.sig span { min-width: 0; overflow-wrap: anywhere; }
+.sig small { color: var(--muted); }
+.card h2 { font: 700 clamp(30px, 6vw, 44px)/1 var(--f-display); margin: 6px 0 4px; letter-spacing: .01em; }
+.card .where { font: 13px var(--f-mono); color: var(--muted); letter-spacing: .03em; }
+.card .why { font-size: 16px; margin: 0; }
+.card .why-l { margin-top: 12px; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.expected { margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--panel-2); font-size: 13px; }
+.conf { display: grid; gap: 6px; }
+.conf-top { display: flex; justify-content: space-between; align-items: baseline; }
+.conf-top b { font: 500 15px var(--f-mono); letter-spacing: .06em; }
+.conf-bar { height: 6px; border-radius: 3px; background: var(--panel-2); position: relative; overflow: hidden; }
+.conf-bar i { position: absolute; inset: 0 auto 0 0; background: var(--fg); border-radius: 3px; }
+.conf-bar::before, .conf-bar::after { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: var(--bg); z-index: 1; }
+.conf-bar::before { left: 30%; } .conf-bar::after { left: 60%; }
+.conf-scale { display: flex; justify-content: space-between; font: 10.5px var(--f-mono); color: var(--muted); letter-spacing: .08em; }
+.feedgroup { display: grid; gap: 2px; }
+.feedgroup .label { display: flex; gap: 8px; align-items: center; color: var(--fg); }
+.feedgroup .label i { width: 7px; height: 7px; border-radius: 50%; }
+.feedgroup .label small { color: var(--muted); letter-spacing: .04em; text-transform: none; }
+.nav { display: flex; align-items: center; gap: 10px; }
+.nb { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); font-size: 20px; line-height: 1; flex: none; }
+.pos { font: 18px var(--f-mono); font-variant-numeric: tabular-nums; min-width: 72px; text-align: center; }
+.mode-btn { height: 40px; padding: 0 16px; border-radius: 20px; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); font: 500 13px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.mode-btn.paused { background: var(--accent); color: #111; }
+.prog { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); }
+.spark { width: 100%; height: 86px; display: block; }
+.sitrow { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+.sitrow + .sitrow { border-top: 1px solid var(--line); }
+.sitrow > i { width: 9px; height: 9px; border-radius: 50%; background: var(--c-ongoing); flex: none; }
+.sitrow b { font-weight: 500; font-size: 16px; flex: 1; min-width: 0; }
+.sitrow .st { font: 11.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--c-ongoing); }
+.sitrow .tr { font: 12px var(--f-mono); color: var(--muted); min-width: 70px; text-align: right; }
+button.sitrow { width: 100%; background: none; border: 0; text-align: left; padding: 10px 0; }
+.hz-card { border-color: var(--c-hazard); background: linear-gradient(180deg, rgba(197,216,109,.06), transparent 60%), var(--panel); }
+.hz-card h3 { font: 700 24px/1.1 var(--f-display); margin: 8px 0 4px; }
+.hz-head { display: flex; align-items: center; gap: 8px; color: var(--c-hazard); font: 12px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; }
+.hz-head svg { width: 16px; height: 16px; }
+.hz-list .sig i { background: var(--c-hazard); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.fchip { display: inline-flex; gap: 7px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+.fchip i { width: 8px; height: 8px; border-radius: 50%; }
+.fchip.bad { border-color: var(--bad); background: rgba(229,72,77,.1); }
+.fchip.stale { border-color: var(--warn); }
+.fchip.on { outline: 1.5px solid var(--accent); }
+.fchip small { color: var(--muted); font: 11px var(--f-mono); }
+.credits { color: var(--muted); font: 11px var(--f-mono); line-height: 1.7; }
+.credits a { color: inherit; }
+.queue-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; width: 100%; background: none; border: 0; text-align: left; }
+.queue-row + .queue-row { border-top: 1px solid var(--line); }
+.queue-row .n { font: 13px var(--f-mono); color: var(--muted); }
+.queue-row b { font-weight: 500; font-size: 16px; display: block; }
+.queue-row small { font: 12px var(--f-mono); color: var(--muted); }
+.queue-row small.exp { color: var(--accent); }
+
+/* globe */
+.globe-wrap { position: relative; min-height: 0; }
+canvas#globe { width: 100%; height: 100%; display: block; touch-action: pan-y; }
+.key-btn { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: flex; gap: 8px; align-items: center; background: rgba(11,17,24,.75); border: 1px solid var(--line); border-radius: 22px; padding: 8px 14px; font: 13px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(4px); }
+.key { position: absolute; left: 12px; bottom: 60px; z-index: 3; background: rgba(11,17,24,.9); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font: 12px var(--f-mono); display: grid; gap: 6px; backdrop-filter: blur(4px); min-width: 230px; }
+.key .k2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; padding-top: 8px; border-top: 1px solid var(--line); }
+.key span { display: flex; gap: 8px; align-items: center; }
+.key i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.key i.ring { background: none; border: 2px solid; width: 12px; height: 12px; }
+.key i.sq { border-radius: 2px; background: rgba(217,120,90,.55); border: 1px solid var(--c-ongoing); }
+.hz-badge { position: absolute; top: 12px; left: 12px; z-index: 3; display: inline-flex; gap: 8px; align-items: center; border: 1.5px solid var(--c-hazard); color: var(--c-hazard); background: rgba(11,17,24,.75); border-radius: 22px; padding: 8px 16px; font: 500 13px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; backdrop-filter: blur(4px); }
+.hz-badge svg { width: 16px; height: 16px; }
+
+/* intro */
+.intro { position: fixed; inset: 0; z-index: 60; background: rgba(5,9,14,.75); display: grid; place-items: center; padding: 16px; }
+.intro-card { max-width: 560px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 14px; max-height: 92vh; overflow: auto; }
+.intro-card h2 { font: 700 30px var(--f-display); margin: 0; }
+.intro-card ul { margin: 0; padding-left: 18px; display: grid; gap: 10px; }
+.intro-card li, .intro-card p { font-size: 14.5px; margin: 0; }
+.intro-ok { justify-self: end; background: var(--accent); color: #111; border: 0; border-radius: 6px; padding: 10px 20px; font: 600 14px var(--f-body); }
+.intro-check { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+
+/* ================= PHONE ================= */
+body[data-mode="phone"] { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+body[data-mode="phone"] .wall-only, body[data-mode="phone"] .stream-only { display: none !important; }
+.p-top { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; }
+.p-top .clock { margin-left: auto; }
+.p-status { display: flex; align-items: center; gap: 12px; padding: 0 16px 10px; border-bottom: 1px solid var(--line); font: 13px var(--f-mono); color: var(--muted); overflow: hidden; white-space: nowrap; }
+.p-status .bad { color: var(--bad); }
+body[data-mode="phone"] .globe-wrap { height: min(100vw, 52vh); }
+.sheet { position: relative; margin-top: -18px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px 18px 0 0; padding: 10px 16px 18px; display: grid; gap: 14px; z-index: 4; }
+.sheet .handle { width: 46px; height: 5px; border-radius: 3px; background: var(--line); justify-self: center; border: 0; padding: 0; }
+.sheet .nav { justify-content: space-between; }
+.sheet-hint { text-align: center; font-size: 13.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.sheet .more[hidden] { display: none; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--bg); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+.tabs button { background: none; border: 0; height: 62px; display: grid; place-items: center; gap: 2px; color: var(--muted); position: relative; font: 10px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; }
+.tabs button svg { width: 24px; height: 24px; }
+.tabs button.on { color: var(--fg); }
+.tabs button.on::before { content: ""; position: absolute; top: 0; left: 18%; right: 18%; height: 2px; background: var(--accent); }
+.tabs .badge { position: absolute; top: 6px; left: 56%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; font: 11px var(--f-mono); padding: 0 6px; color: var(--fg); }
+.p-panel { padding: 4px 0 0; display: grid; gap: 14px; }
+
+/* ================= WALL ================= */
+body[data-mode="wall"] { height: 100vh; overflow: hidden; font-size: 16px; }
+body[data-mode="wall"] .phone-only, body[data-mode="wall"] .stream-only { display: none !important; }
+.wall { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) minmax(0, 23vh) auto; gap: 14px; padding: 16px 24px 10px; }
+.w-top { display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.w-top .brand { font-size: 34px; }
+.w-top .tag { font: 14px var(--f-mono); color: var(--muted); }
+.w-top .counts { font: 15px var(--f-mono); color: var(--muted); }
+.w-top .date { margin-left: auto; font: 15px var(--f-mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.w-top .clock { font-size: 46px; font-weight: 500; }
+.w-mid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.7fr) minmax(0, 1.1fr); gap: 20px; min-height: 0; }
+.w-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden; }
+.w-globe { display: grid; grid-template-rows: minmax(0, 1fr) auto auto; gap: 8px; min-height: 0; }
+.w-globe .nav { justify-content: center; }
+.w-globe .prog { width: 70%; justify-self: center; }
+.w-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; min-height: 0; }
+.w-bottom .panel { overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+.w-foot { display: flex; justify-content: space-between; gap: 20px; font: 12px var(--f-mono); color: var(--muted); }
+body[data-mode="wall"] .card { overflow: hidden; display: flex; flex-direction: column; gap: 10px; border-top: 3px solid var(--accent); }
+body[data-mode="wall"] .card h2 { font-size: 54px; }
+body[data-mode="wall"] .sig { font-size: 16px; grid-template-columns: 60px 10px 1fr; }
+body[data-mode="wall"] .key { bottom: auto; top: 0; left: 0; }
+body[data-mode="wall"] .key-btn { display: none; }
+body[data-mode="wall"] .hz-badge { display: none; }
+
+/* ================= STREAM ================= */
+body[data-mode="stream"] { height: 100vh; overflow: hidden; cursor: none; }
+body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { display: none !important; }
+.stream { position: fixed; inset: 0; }
+.stream .globe-wrap { position: absolute; top: 0; bottom: 64px; left: 28%; right: 0; }
+.s-bug { position: absolute; top: 48px; left: 5vw; display: flex; align-items: center; gap: 18px; z-index: 3; }
+.s-bug .brand { font-size: 34px; }
+.s-clock { position: absolute; top: 40px; right: 5vw; text-align: right; z-index: 3; }
+.s-clock .clock { font-size: 44px; font-weight: 500; }
+.s-clock small { display: block; font: 15px var(--f-mono); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+.s-side { position: absolute; top: 19vh; left: 5vw; width: 25vw; display: grid; gap: 14px; z-index: 3; }
+.s-side .label { margin-bottom: 2px; }
+.s-item { background: rgba(17,26,36,.92); border: 1px solid var(--line); border-left: 4px solid var(--c-signal); border-radius: 6px; padding: 14px 18px; }
+.s-item .label { color: var(--c-signal); }
+.s-item b { display: block; font: 700 30px/1.1 var(--f-display); margin: 4px 0 2px; }
+.s-item span { font-size: 15px; color: var(--muted); }
+.s-item.ongoing { border-left-color: var(--c-ongoing); } .s-item.ongoing .label { color: var(--c-ongoing); }
+.s-item.hz { border: 1.5px solid var(--c-hazard); } .s-item.hz .label { color: var(--c-hazard); }
+.s-lt { position: absolute; left: 5vw; bottom: 104px; width: 58vw; z-index: 4; }
+.s-lt .tagrow { display: flex; align-items: stretch; }
+.s-lt .tagrow > * { padding: 8px 16px; font: 500 15px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; background: rgba(11,17,24,.95); display: flex; align-items: center; gap: 8px; }
+.s-lt .tagrow .lvl { background: var(--c-reported); color: #111; }
+.s-lt .tagrow .lvl.signal { background: var(--c-signal); }
+.s-lt .tagrow i { width: 8px; height: 8px; border-radius: 50%; }
+.s-lt .box { background: rgba(11,17,24,.95); padding: 18px 30px 20px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; }
+.s-lt h2 { font: 700 76px/1 var(--f-display); margin: 0; }
+.s-lt h2 small { font: 500 34px var(--f-display); color: var(--muted); margin-left: 14px; }
+.s-lt .head { font-size: 25px; margin: 8px 0 6px; }
+.s-lt .why { font-size: 17px; color: var(--muted); margin: 0; }
+.s-lt .sconf { border-left: 1px solid var(--line); padding-left: 24px; min-width: 210px; }
+.s-lt .sconf b { font: 700 46px var(--f-display); } .s-lt .sconf b small { font: 500 26px var(--f-display); color: var(--muted); margin-left: 6px; }
+.s-lt .prog { height: 3px; }
+.s-meta { position: absolute; right: 5vw; bottom: 104px; font: 15px var(--f-mono); color: var(--muted); z-index: 3; }
+.ticker { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: rgba(11,17,24,.97); border-top: 1px solid var(--line); display: flex; align-items: center; z-index: 5; overflow: hidden; }
+.ticker > .label { flex: none; padding: 0 28px 0 5vw; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--line); font-size: 14px; color: var(--fg); }
+.ticker .run { flex: 1; overflow: hidden; white-space: nowrap; }
+.ticker .run div { display: inline-block; padding-left: 100%; animation: tick 120s linear infinite; font-size: 21px; }
+.ticker .run span { margin-right: 46px; }
+.ticker .run time { font: 18px var(--f-mono); color: var(--muted); margin-right: 10px; }
+.ticker .run i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 10px; vertical-align: 2px; }
+.ticker .cred { flex: none; padding: 0 5vw 0 20px; font: 12px var(--f-mono); color: var(--muted); border-left: 1px solid var(--line); height: 100%; display: flex; align-items: center; }
+@keyframes tick { to { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) { .live::before, svg.o .ping, .ticker .run div { animation: none; } }
+</style>
+</head>
+<body data-mode="phone">
+
+<!-- ======== Shared globe (moved into each mode's slot at start) ======== -->
+<div class="globe-wrap" id="globeWrap">
+  <canvas id="globe" aria-label="Globe of current hotspots and signals"></canvas>
+  <div class="hz-badge" id="hzBadge" hidden></div>
+  <button class="key-btn" id="keyBtn" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/></svg>Key</button>
+  <div class="key" id="key" hidden>
+    <div class="label">Map key</div>
+    <span><i class="ring" style="border-color:var(--c-reported)"></i>Reported</span>
+    <span><i class="ring" style="border-color:var(--c-signal)"></i>Signal</span>
+    <span><i class="sq"></i>Ongoing situation</span>
+    <span><i class="ring" style="border-color:var(--c-hazard)"></i>Natural hazard (not security)</span>
+    <div class="k2" id="keyFeeds"></div>
+  </div>
+</div>
+
+<!-- ======== PHONE ======== -->
+<div class="phone-only" id="phone">
+  <header class="p-top"><span class="brand" id="brandP"></span><span class="clock" data-clock></span><button class="help" data-help aria-label="What am I looking at?">?</button></header>
+  <div class="p-status"><span class="live">Live tripwires</span><span id="pHealth">Checking feeds…</span></div>
+  <div id="slotPhone"></div>
+  <section class="sheet" id="sheet">
+    <button class="handle" id="handle" aria-label="Pull up for signals and sources"></button>
+    <div id="pTour">
+      <div class="nav"><button class="nb" data-move="-1" aria-label="Previous">‹</button><span class="pos" data-pos></span><button class="mode-btn" data-pause></button><button class="nb" data-move="1" aria-label="Next">›</button></div>
+      <div class="prog" style="margin-top:12px"><i data-prog></i></div>
+      <div class="card" id="cardP" style="margin-top:14px"></div>
+    </div>
+    <div class="p-panel" id="pPanel" hidden></div>
+  </section>
+  <nav class="tabs" id="tabs">
+    <button data-tab="tour" class="on" aria-label="Tour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></svg>Tour</button>
+    <button data-tab="situations" aria-label="Situations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6Z"/><path d="M9 4v14M15 6v14"/></svg>Situations</button>
+    <button data-tab="watching" aria-label="Watching"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>Watching<span class="badge" id="watchBadge" hidden></span></button>
+    <button data-tab="signals" aria-label="Signals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg>Signals</button>
+    <button data-tab="feeds" aria-label="Feeds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></svg>Feeds</button>
+  </nav>
+</div>
+
+<!-- ======== WALL ======== -->
+<div class="wall wall-only" id="wall">
+  <header class="w-top"><span class="brand" id="brandW"></span><span class="tag">Powered by the Tripwire engine</span><span class="live">Live tripwires</span><span class="counts" id="wCounts"></span><span class="date" id="wDate"></span><span class="clock" data-clock></span></header>
+  <div class="w-mid">
+    <div class="w-col"><div class="label">Ongoing situations</div><div id="wSits" style="display:grid;gap:12px;min-height:0"></div><div id="wHaz"></div></div>
+    <div class="w-globe"><div id="slotWall" style="min-height:0;position:relative"></div>
+      <div class="nav"><button class="nb" data-move="-1" aria-label="Previous">‹</button><span class="pos" data-pos></span><button class="mode-btn" data-pause></button><button class="nb" data-move="1" aria-label="Next">›</button></div>
+      <div class="prog"><i data-prog></i></div></div>
+    <div class="w-col"><section class="panel card" id="cardW"></section><div class="label">Up next</div><div class="panel" id="wNext" style="padding-top:4px;padding-bottom:4px"></div></div>
+  </div>
+  <div class="w-bottom">
+    <div class="panel"><div class="label" style="display:flex;justify-content:space-between"><span id="wWatchT">Watching</span><span style="text-transform:none;letter-spacing:.02em">needs a second source</span></div><div id="wWatch"></div></div>
+    <div class="panel"><div class="label">Latest signals</div><div id="wLatest"></div></div>
+    <div class="panel"><div class="label" style="display:flex;justify-content:space-between"><span>Feed health</span><span id="wHealthSum" style="text-transform:none;letter-spacing:.02em"></span></div><div class="chips" id="wFeeds"></div><p class="note" id="wFeedNote"></p></div>
+  </div>
+  <footer class="w-foot"><span class="credits" data-credits></span><span>ricochet.watch · nothing is shown as confirmed unless it is</span></footer>
+</div>
+
+<!-- ======== STREAM ======== -->
+<div class="stream stream-only" id="stream">
+  <div id="slotStream"></div>
+  <div class="s-bug"><span class="brand" id="brandS"></span><span class="live">Live tripwires</span></div>
+  <div class="s-clock"><span class="clock" data-clock></span><small id="sDate"></small></div>
+  <div class="s-side"><div class="label">Also on the globe</div><div id="sSide" style="display:grid;gap:14px"></div></div>
+  <div class="s-lt" id="sLt"></div>
+  <div class="s-meta" id="sMeta"></div>
+  <div class="ticker"><span class="label">Latest signals</span><div class="run"><div id="sTick"></div></div><span class="cred">Data: GDELT · FIRMS · IODA · USGS · GDACS · adsb.fi +6 · ricochet.watch</span></div>
+</div>
+
+<div class="intro" id="intro" hidden role="dialog" aria-labelledby="introTitle">
+  <div class="intro-card">
+    <h2 id="introTitle">What am I looking at?</h2>
+    <p>Ricochet watches public data for the early echoes of conflict and security incidents: news wires, fire-spotting satellites, internet outages, seismic sensors, aircraft, shipping and Wikipedia edits. Each is compared with what's normal for that place.</p>
+    <ul>
+      <li><b>Rings on the globe</b> are hotspots. <span style="color:var(--c-reported)">Amber = Reported</span>: two or more independent feeds above normal. <span style="color:var(--c-signal)">Grey-blue = Signal</span>: one feed well above normal.</li>
+      <li><b>Shaded countries</b> have an ongoing or escalating situation in the news.</li>
+      <li><b><span style="color:var(--c-hazard)">Lime</span> marks natural hazards and weather warnings.</b> They're not security incidents and are kept separate.</li>
+      <li><b>Cards</b> explain why each hotspot is there and link to the original reporting. Swipe, use ‹ › or the arrow keys. Touching the tour pauses it.</li>
+      <li><b>Nothing here is confirmed.</b> These are automated tripwires, not verified events. Follow the links to the source.</li>
+    </ul>
+    <label class="intro-check"><input type="checkbox" id="introNever"> Don't show this again</label>
+    <button class="intro-ok" id="introOk">Got it</button>
+  </div>
+</div>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script>
+/* ================= Setup ================= */
+const qs = new URLSearchParams(location.search);
+const MODE = ['phone', 'wall', 'stream'].includes(qs.get('mode')) ? qs.get('mode') : (innerWidth >= 1280 && innerHeight >= 700 ? 'wall' : 'phone');
+document.body.dataset.mode = MODE;
+const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue(k).trim();
+const SRC = { news: 'News', gdelt: 'GDELT', ioda: 'Internet', wiki: 'Wikipedia', firms: 'Fires', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Airspace', radar: 'CF Radar', ais: 'Shipping', infra: 'Infra', hazard: 'Hazards' };
+const SRC_LONG = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (NASA FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace', radar: 'Cloudflare Radar', ais: 'Shipping', infra: 'Infrastructure', hazard: 'Natural hazards' };
+const SCOL = s => C('--s-' + (s === 'airspace' ? 'adsb' : s)) || '#8796a6';
+const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const hhmm = ts => new Date(ts * 1000).toISOString().slice(11, 16) + 'Z';
+const $ = id => document.getElementById(id), $$ = s => document.querySelectorAll(s);
+const PAUSE_RESUME = MODE === 'phone' ? 180000 : 60000;   // phones: people read; wall: back to the tour after a minute
+const DWELL = MODE === 'stream' ? 14000 : 11000;
+const ZOOM = { phone: [1.75, 1.35], wall: [1.4, 1.15], stream: [1.3, 1.1] }[MODE];   // [hotspot, ongoing country]
+let loaded = false;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SWIRL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2.5"/><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/></svg>';
+const BRAND = `Ric<svg class="o" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="9"/><circle class="ping" cx="51.1" cy="12.9" r="8" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="51.1" cy="12.9" r="9" fill="var(--accent)" style="stroke:var(--bg)" stroke-width="5"/></svg>chet`;
+['brandP', 'brandW', 'brandS'].forEach(id => { $(id).innerHTML = BRAND; $(id).setAttribute('aria-label', 'Ricochet'); });
+$('slot' + MODE[0].toUpperCase() + MODE.slice(1)).appendChild($('globeWrap'));
+if (MODE !== 'phone') { $('slot' + MODE[0].toUpperCase() + MODE.slice(1)).style.height = '100%'; $('globeWrap').style.height = '100%'; }
+const CREDITS = 'Data: <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a> · <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> · <a href="https://ioda.inetintel.cc.gatech.edu/" target="_blank" rel="noopener">IODA</a> · <a href="https://radar.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Radar</a> · <a href="https://www.wikimedia.org/" target="_blank" rel="noopener">Wikimedia</a> · aircraft from <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a> · <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a> · <a href="https://www.gdacs.org/" target="_blank" rel="noopener">GDACS</a> (CC BY 4.0) · <a href="https://www.tsunami.gov/" target="_blank" rel="noopener">NOAA</a> · <a href="https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings" target="_blank" rel="noopener">Met Office</a> · <a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a> · places from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>, <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> · news from the outlets linked in each signal';
+$$('[data-credits]').forEach(e => e.innerHTML = CREDITS);
+$('keyFeeds').innerHTML = ['news', 'gdelt', 'ioda', 'wiki', 'firms', 'adsb', 'seismic', 'ais', 'infra', 'hazard'].map(s => `<span><i style="background:${SCOL(s)}"></i>${SRC[s]}</span>`).join('');
+
+/* ================= Data ================= */
+let hotspots = [], watching = [], situations = [], worldShare = null, signals = [], hazards = [], health = null;
+let stops = [], focus = null, tourIdx = -1, cellSignals = [], phaseEnd = 0, dwellTotal = DWELL, manual = false, lastTouch = 0;
+async function getJSON(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+let countryFeats = [];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function placeName(lat, lon) {   // from the map's own outlines, when the engine has no place name
+  if (!countryFeats.length) return `${lat.toFixed(1)}, ${lon.toFixed(1)}`;
+  const p = [lon, lat];
+  let f = countryFeats.find(c => d3.geoContains(c, p));
+  if (!f) { f = countryFeats.reduce((a, c) => d3.geoDistance(p, c.c) < d3.geoDistance(p, a.c) ? c : a); return d3.geoDistance(p, f.c) > .15 ? 'At sea' : `Near ${f.properties.name}`; }
+  const [[w, s], [e, n]] = f.b; if (e < w) return f.properties.name;
+  const ns = lat > s + (n - s) * 2 / 3 ? 'north' : lat < s + (n - s) / 3 ? 'south' : '', ew = lon > w + (e - w) * 2 / 3 ? 'east' : lon < w + (e - w) / 3 ? 'west' : '';
+  return `${cap(ns && ew ? `${ns}-${ew}ern` : ns ? `${ns}ern` : ew ? `${ew}ern` : 'central')} ${f.properties.name}`;
+}
+const nameOf = h => h.type === 'ongoing' ? h.name : (h.site && h.site.name) || h.place || h._name || (h._name = placeName(h.lat, h.lon));
+const shortName = h => nameOf(h).split(',')[0];
+const featureFor = c => c._f !== undefined ? c._f : (c._f = countryFeats.find(f => d3.geoContains(f, [c.lon, c.lat])) || null);
+const confWord = c => c >= 60 ? 'High' : c >= 30 ? 'Medium' : 'Low';
+const hzLevel = s => (s.extra && s.extra.alert) || '';
+const majorHazard = s => /gdacs_(red|orange)|tsunami_(warning|threat|advisory|watch)/.test(s.kind) || (s.kind === 'met_warning' && /red|amber/.test(hzLevel(s)));
+
+async function refresh() {
+  try {
+    const [h, s, o, z] = await Promise.all([getJSON('/api/hotspots?hours=6&watch=1'), getJSON('/api/signals?hours=6'),
+      getJSON('/api/situations').catch(() => ({ countries: [] })), getJSON('/api/signals?hours=72&feed=hazard&limit=50').catch(() => ({ signals: [] }))]);
+    hotspots = h.hotspots.filter(x => x.level !== 'watch'); watching = h.hotspots.filter(x => x.level === 'watch');
+    signals = s.signals.filter(x => x.source !== 'hazard'); situations = o.countries || []; worldShare = o.world_share;
+    hazards = z.signals; loaded = true;
+    stops = [...hotspots.slice(0, 12).map(x => Object.assign(x, { type: 'hotspot', key: x.cell })),
+             ...situations.slice(0, 6).map(x => Object.assign(x, { type: 'ongoing', key: 'c:' + x.country }))];
+    if (focus) { const i = stops.findIndex(x => x.key === focus.key); if (i >= 0) { tourIdx = i; focus = stops[i]; } }
+    renderAll();
+  } catch (e) { console.warn('refresh', e); }
+}
+async function refreshHealth() { try { health = await getJSON('/api/health'); renderHealth(); } catch (e) {} }
+async function loadCell() {
+  try {
+    cellSignals = focus.type === 'ongoing' ? (await getJSON('/api/signals?hours=24&country=' + encodeURIComponent(focus.country))).signals
+      : (await getJSON('/api/signals?hours=6&cell=' + encodeURIComponent(focus.cell))).signals;
+  } catch (e) { cellSignals = []; }
+}
+
+/* ================= Tour ================= */
+function next() {
+  if (!stops.length) { focus = null; tween = { from: rot.slice(), to: [rot[0] + 20, -20], z0: zoom, z1: 1, t0: performance.now(), dur: 1500 }; renderCard(); phaseEnd = performance.now() + 15000; return; }
+  tourIdx = (tourIdx + 1) % stops.length; setFocus(stops[tourIdx], DWELL);
+}
+function pause() { manual = true; lastTouch = performance.now(); phaseEnd = Infinity; renderControls(); }
+function resume() { manual = false; phaseEnd = performance.now() + 400; renderControls(); }
+function move(d) { if (!stops.length) return; pause(); tourIdx = ((focus ? tourIdx : -1) + d + stops.length) % stops.length; setFocus(stops[tourIdx], DWELL); }
+function jump(i) { pause(); tourIdx = i; setFocus(stops[i], DWELL); }
+async function setFocus(h, dwell, stay) {
+  focus = h; if (!stay) flyTo(h.lon, h.lat, ZOOM[h.type === 'ongoing' ? 1 : 0]);
+  dwellTotal = dwell; phaseEnd = manual ? Infinity : performance.now() + dwell;
+  await loadCell(); renderCard(); renderNext();
+}
+function renderControls() {
+  $$('[data-pos]').forEach(e => e.textContent = stops.length ? `${tourIdx + 1} / ${stops.length}` : '0 / 0');
+  $$('[data-pause]').forEach(e => { e.textContent = manual ? '▶ Resume tour' : '❚❚ Pause tour'; e.classList.toggle('paused', manual); });
+}
+$$('[data-move]').forEach(b => b.onclick = () => move(+b.dataset.move));
+$$('[data-pause]').forEach(b => b.onclick = () => manual ? resume() : pause());
+
+/* ================= Cards ================= */
+function sigLine(s) {
+  const link = s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title);
+  return `<div class="sig"><time>${hhmm(s.observed_at)}</time><i style="background:${SCOL(s.source)}"></i><span>${link}</span></div>`;
+}
+const confBlock = c => `<div class="conf"><div class="conf-top"><span class="label">Confidence</span><b>${confWord(c).toUpperCase()} · ${c}/100</b></div><div class="conf-bar"><i style="width:${c}%"></i></div><div class="conf-scale"><span>LOW</span><span>MEDIUM</span><span>HIGH</span></div></div>`;
+function feedPills(h) {
+  return (h.sources || []).map(s => { const f = (h.feeds || {})[s] || {}; const v = f.ratio && f.baseline ? `${f.ratio}×` : f.n || '';
+    return `<span class="pill"><i style="background:${SCOL(s)}"></i>${SRC[s] || s} ${v}</span>`; }).join('');
+}
+function hotspotCard(h, full) {
+  const lvl = h.level === 'reported' ? 'Reported' : 'Signal';
+  const why = (h.reason || '').split(' · expected:')[0];
+  const bySrc = {}; cellSignals.forEach(s => (bySrc[s.source] = bySrc[s.source] || []).push(s));
+  const groups = Object.entries(bySrc).sort((a, b) => b[1].length - a[1].length).map(([src, list]) => {
+    const f = (h.feeds || {})[src] || {}, norm = !f.baseline ? 'no baseline yet' : f.ratio ? `${f.ratio}× normal` : 'not usually seen here';
+    return `<div class="feedgroup"><div class="label"><i style="background:${SCOL(src)}"></i>${SRC_LONG[src] || src} · ${list.length} <small>${f.elevated ? '▲ ' : ''}${norm}</small></div>${list.slice().reverse().slice(0, full ? 4 : 2).map(sigLine).join('')}</div>`;
+  }).join('');
+  return `<div class="meta"><span class="pill lvl-${h.level}">${lvl}</span>${feedPills(h)}</div>
+    <h2>${esc(shortName(h))}</h2>
+    <div class="where">${esc(nameOf(h))} · ${Math.abs(h.lat).toFixed(2)}°${h.lat >= 0 ? 'N' : 'S'} ${Math.abs(h.lon).toFixed(2)}°${h.lon >= 0 ? 'E' : 'W'}</div>
+    <div class="label why-l">Why it's here</div><p class="why">${esc(why)}</p>
+    ${h.site ? `<p class="note">Sensitive site: <b style="color:var(--fg)">${esc(h.site.name)}</b> (${esc(h.site.kind)})</p>` : ''}
+    ${h.expected ? `<p class="expected"><b>Expected: ${esc(h.expected.name)}.</b> ${esc(h.expected.note)} Check before escalating.</p>` : ''}
+    ${h.threat_level ? `<p class="note">${esc(h.threat_level.label)}: <b style="color:var(--fg)">${esc(h.threat_level.level)}</b> (${esc(h.threat_level.meaning)}). <a href="${esc(h.threat_level.url)}" target="_blank" rel="noopener">Official page</a></p>` : ''}
+    ${h.confidence != null ? confBlock(h.confidence) : ''}
+    <div class="more"${full ? '' : ' hidden'} style="display:grid;gap:12px">
+      <div class="label">Signals here, by feed</div>${groups || '<p class="empty">Loading…</p>'}
+      <p class="note">Nothing here is confirmed by Ricochet: read the original reporting. First signal ${hhmm(h.first)}, latest ${hhmm(h.last)}, ${h.count} signals.</p>
+    </div>`;
+}
+function sparkline(series, world) {
+  const w = 320, h = 86, n = series.length, bw = w / n - 8, max = Math.max((world || 1) * 2.2, ...series.filter(v => v != null)) || 1;
+  const y = v => h - 18 - (v / max) * (h - 26), days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'], today = Math.floor(Date.now() / 864e5);
+  const bars = series.map((v, i) => { const x = i * (w / n) + 4, d = days[new Date((today - (n - 1 - i)) * 864e5).getUTCDay()];
+    return `${v == null ? '' : `<rect x="${x}" y="${y(v)}" width="${bw}" height="${h - 18 - y(v)}" rx="2" fill="${C('--c-ongoing')}" opacity="${i === n - 1 ? 1 : .55 + .4 * i / n}"><title>${d}: ${v}%</title></rect>`}<text x="${x + bw / 2}" y="${h - 3}" text-anchor="middle" font-size="10" fill="${C('--muted')}" font-family="IBM Plex Mono, monospace">${d}</text>`; }).join('');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Conflict share of coverage by day">${bars}${world != null ? `<line x1="0" x2="${w}" y1="${y(world)}" y2="${y(world)}" stroke="${C('--fg')}" stroke-opacity=".6" stroke-dasharray="5 4"/>` : ''}</svg>`;
+}
+function situationCard(s, full) {
+  const esc8 = s.state === 'escalating';
+  const arrow = s.trend === 'rising' ? '↑' : s.trend === 'easing' ? '↓' : '→';
+  const latest = cellSignals.slice(0, full ? 5 : 2);
+  return `<div class="meta"><span class="pill lvl-${esc8 ? 'escalating' : 'ongoing'}">${esc8 ? 'Escalating' : 'Ongoing'}</span><span class="mono" style="color:var(--c-ongoing)">${arrow} ${esc(s.trend)}</span></div>
+    <h2>${esc(s.name)}</h2>
+    <div class="where">Conflict share · 7 days <b style="color:var(--fg)">${s.share}%</b> vs ${worldShare}% world</div>
+    ${sparkline(s.series, worldShare)}
+    <div class="label">Latest reports</div>${latest.map(sigLine).join('') || '<p class="empty">Loading…</p>'}
+    <p class="note">Measured from how worldwide news is coded by GDELT: sustained conflict coverage, not verified events.</p>`;
+}
+function renderCard() {
+  renderControls();
+  const empty = !loaded ? `<h2 style="font-size:32px">Loading…</h2><p class="note">Contacting the Tripwire engine.</p>` : `<h2 style="font-size:32px">Nothing above normal right now</h2><p class="note">A hotspot opens when an area runs well above its normal level: two feeds active with at least one spiking, or one feed spiking hard on its own. The globe keeps spinning until then.</p>`;
+  const html = full => !focus ? empty : focus.type === 'ongoing' ? situationCard(focus, full) : hotspotCard(focus, full);
+  if (MODE === 'phone') {
+    $('cardP').innerHTML = html(sheetOpen) + (focus ? `<div class="sheet-hint">${sheetOpen ? '⌄ Push down to collapse' : `⌃ Pull up for ${focus.type === 'ongoing' ? 'latest reports' : (focus.count || '') + ' signals and sources'} · swipe for next`}</div>` : '');
+  } else if (MODE === 'wall') {
+    $('cardW').innerHTML = html(true);
+  } else {
+    renderStreamLT();
+  }
+  renderHazardBadge();
+}
+
+/* ================= Side panels (shared builders) ================= */
+function situationsHTML(compact) {
+  if (!situations.length) return '<p class="empty">No ongoing or escalating situations in the news right now.</p>';
+  const [first, ...rest] = situations;
+  const top = `<button class="panel" style="text-align:left;border-top:3px solid var(--c-ongoing);display:grid;gap:8px;width:100%" data-stop="c:${esc(first.country)}">${situationCardStatic(first)}</button>`;
+  const rows = rest.slice(0, compact ? 3 : 8).map(s => `<button class="sitrow" data-stop="c:${esc(s.country)}"><i></i><b>${esc(s.name)}</b><span class="st">${s.state === 'escalating' ? 'Escalating' : 'Ongoing'}</span><span class="tr">${s.trend === 'rising' ? '↑ rising' : s.trend === 'easing' ? '↓ easing' : '→ steady'}</span></button>`).join('');
+  return top + (rows ? `<div class="panel" style="padding-top:2px;padding-bottom:2px">${rows}</div>` : '');
+}
+function situationCardStatic(s) {
+  const esc8 = s.state === 'escalating';
+  return `<div class="meta"><span class="pill lvl-${esc8 ? 'escalating' : 'ongoing'}">${esc8 ? 'Escalating' : 'Ongoing'}</span><span class="mono" style="color:var(--c-ongoing)">${s.trend === 'rising' ? '↑' : s.trend === 'easing' ? '↓' : '→'} ${esc(s.trend)}</span></div>
+    <b style="font:700 34px/1 var(--f-display)">${esc(s.name)}</b><div class="where" style="font:12px var(--f-mono);color:var(--muted)">Conflict share · 7 days <b style="color:var(--fg)">${s.share}%</b> vs ${worldShare}% world</div>${sparkline(s.series, worldShare)}`;
+}
+function hazardTitle(s) {
+  const x = s.extra || {};
+  if (s.kind.startsWith('gdacs')) return `${s.place || 'Hazard'}${x.severity ? ' · ' + x.severity : ''}`;
+  if (s.kind.startsWith('met')) return `${cap(x.weather || 'weather')} · ${s.place}`;
+  return s.place || s.title;
+}
+function hazardsHTML(limit) {
+  const major = hazards.filter(majorHazard), minor = hazards.filter(s => !majorHazard(s));
+  const head = `<div class="hz-head">${SWIRL}Natural hazards <span class="muted" style="letter-spacing:.04em;text-transform:none">· not security incidents</span></div>`;
+  if (!hazards.length) return head + '<p class="empty" style="margin-top:6px">No major hazard alerts right now.</p>';
+  const cards = major.slice(0, limit).map(s => {
+    const lvl = hzLevel(s), type = (s.extra && (s.extra.hazard || s.extra.weather)) || 'hazard';
+    const tag = s.kind.startsWith('gdacs') ? `<span class="pill hz-${lvl}">GDACS ${esc(lvl)}</span>` : s.kind.startsWith('tsunami') ? `<span class="pill hz">Tsunami ${esc(lvl)}</span>` : `<span class="pill hz">Met Office ${esc(lvl)}</span>`;
+    return `<div class="panel hz-card"><div class="meta"><span class="pill hz">${esc(type)}</span>${tag}</div><h3>${esc(hazardTitle(s))}</h3>${s.extra && s.extra.population ? `<p class="note">${esc(s.extra.population)}</p>` : ''}<p class="note">${hhmm(s.observed_at)} · ${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.extra && s.extra.credit || 'source')}</a>` : ''}</p></div>`;
+  }).join('');
+  const rest = minor.length ? `<p class="note" style="margin-top:6px">+ ${minor.length} minor alert${minor.length > 1 ? 's' : ''} (yellow warnings, tsunami information statements) on the map.</p>` : '';
+  return head + `<div style="display:grid;gap:10px;margin-top:8px">${cards}</div>` + rest;
+}
+function watchHTML(n) {
+  return watching.length ? watching.slice(0, n).map(w => `<div class="sig"><time>${hhmm(w.last)}</time><i style="background:${SCOL((w.elevated || w.sources || [])[0])}"></i><span>${esc((w.headline || '').slice(0, 90))} <small>· ${esc(w.site ? w.site.name : shortName(w))}</small></span></div>`).join('')
+    : '<p class="empty">Nothing waiting for a second source.</p>';
+}
+const latestHTML = n => signals.filter(s => s.kind !== 'military_air').slice(0, n).map(sigLine).join('') || '<p class="empty">No signals yet.</p>';
+function healthState(v, now) { return v.ok === null ? 'off' : !v.ok ? 'bad' : (v.last_ok && now - v.last_ok > 3600) ? 'stale' : 'ok'; }
+function healthChips(sel) {
+  if (!health) return '';
+  return Object.entries(health.sources).map(([k, v]) => { const st = healthState(v, health.now);
+    return `<button class="fchip ${st}${sel === k ? ' on' : ''}" data-feed="${k}" title="${esc(v.message)}"><i style="background:${st === 'bad' ? C('--bad') : st === 'stale' ? C('--warn') : SCOL(k)}"></i>${SRC[k] || k}${st === 'bad' ? ' ✕' : ''}</button>`; }).join('');
+}
+function healthSummary() {
+  if (!health) return ['Checking feeds…', ''];
+  const e = Object.entries(health.sources), live = e.filter(([, v]) => v.ok !== null), bad = live.filter(([, v]) => healthState(v, health.now) === 'bad');
+  return [`${live.length - bad.length}/${live.length} feeds healthy`, bad.length ? `${bad.length} failing` : ''];
+}
+
+/* ================= Wall rendering ================= */
+function renderNext() {
+  if (MODE === 'wall') {
+    const q = stops.length ? [1, 2, 3].map(k => (tourIdx + k) % stops.length).filter((v, i, a) => a.indexOf(v) === i && v !== tourIdx) : [];
+    $('wNext').innerHTML = q.length ? q.map(i => { const h = stops[i];
+      const sub = h.type === 'ongoing' ? `${h.state} · conflict share ${h.share}%` : h.expected ? `Expected: ${h.expected.name}, check before escalating` : (h.sources || []).map(s => SRC[s]).join(' + ') + (h.sources && h.sources.some(s => s === 'ioda' || s === 'infra' || s === 'radar') ? ' · cause not confirmed' : '');
+      const tag = h.type === 'ongoing' ? `<span class="pill lvl-ongoing">${h.state}</span>` : `<span class="pill lvl-${h.level}">${h.level} ${h.confidence ?? ''}</span>`;
+      return `<button class="queue-row" data-jump="${i}"><span class="n">${i + 1}/${stops.length}</span><span><b>${esc(shortName(h))}${h.type !== 'ongoing' && h.headline ? ' · ' + esc(h.headline.slice(0, 40)) : ''}</b><small class="${h.expected ? 'exp' : ''}">${esc(sub)}</small></span>${tag}</button>`; }).join('')
+      : '<p class="empty" style="padding:10px 0">Nothing else on the tour.</p>';
+    $('wNext').querySelectorAll('[data-jump]').forEach(b => b.onclick = () => jump(+b.dataset.jump));
+  }
+  if (MODE === 'stream') renderStreamSide();
+}
+function renderWall() {
+  const rep = hotspots.filter(h => h.level === 'reported').length;
+  $('wCounts').textContent = `${hotspots.length} hotspots · ${rep} reported · ${hotspots.length - rep} signals · ${watching.length} watching`;
+  $('wSits').innerHTML = situationsHTML(true);
+  $('wHaz').innerHTML = hazardsHTML(1);
+  $('wWatchT').textContent = `Watching · ${watching.length}`;
+  $('wWatch').innerHTML = watchHTML(4);
+  $('wLatest').innerHTML = latestHTML(5);
+  wireStops($('wall'));
+}
+
+/* ================= Stream rendering ================= */
+function renderStreamLT() {
+  const el = $('sLt');
+  if (!focus) { el.innerHTML = `<div class="box"><div><h2>Global watch</h2><p class="why">${loaded ? 'Nothing above normal right now.' : 'Contacting the Tripwire engine.'} Sources at ricochet.watch.</p></div></div>`; return; }
+  if (focus.type === 'ongoing') {
+    el.innerHTML = `<div class="tagrow"><span class="lvl" style="background:var(--c-ongoing)">${focus.state === 'escalating' ? 'Escalating' : 'Ongoing'}</span><span>Conflict share ${focus.share}% vs ${worldShare}% world</span></div>
+      <div class="box"><div><h2>${esc(focus.name)}</h2><p class="head">${esc((cellSignals[0] || {}).title || 'Sustained conflict coverage in the news')}</p><p class="why">Measured from how worldwide news is coded by GDELT. Not verified events.</p></div></div><div class="prog"><i data-prog></i></div>`;
+    return;
+  }
+  const f = focus, lvl = f.level === 'reported' ? 'Reported' : 'Signal';
+  const country = (nameOf(f).split(',').slice(-1)[0] || '').trim();
+  el.innerHTML = `<div class="tagrow"><span class="lvl ${f.level}">${lvl}</span>${(f.sources || []).slice(0, 3).map(s => { const x = (f.feeds || {})[s] || {}; return `<span><i style="background:${SCOL(s)}"></i>${SRC[s]} ${x.ratio && x.baseline ? x.ratio + '×' : x.n || ''}</span>`; }).join('')}<span class="muted">${f.lat.toFixed(2)}°${f.lat >= 0 ? 'N' : 'S'} ${Math.abs(f.lon).toFixed(2)}°${f.lon >= 0 ? 'E' : 'W'}</span></div>
+    <div class="box"><div><h2>${esc(shortName(f))}${country && country !== shortName(f) ? `<small>${esc(country)}</small>` : ''}</h2><p class="head">${esc(f.headline || '')}</p><p class="why">Why it's here: ${esc((f.reason || '').split(' · expected:')[0])}. Not confirmed by Ricochet.</p></div>
+    ${f.confidence != null ? `<div class="sconf"><div class="label">Confidence</div><b>${confWord(f.confidence).toUpperCase()}<small>${f.confidence}</small></b><div class="conf-bar" style="margin-top:6px"><i style="width:${f.confidence}%"></i></div></div>` : ''}</div><div class="prog"><i data-prog></i></div>`;
+}
+function renderStreamSide() {
+  const items = [];
+  const s = situations[0]; if (s) items.push(`<div class="s-item ongoing"><div class="label">Ongoing · ${s.state === 'escalating' ? 'escalating ↑' : esc(s.trend)}</div><b>${esc(s.name)}</b><span>Conflict share ${s.share}% vs ${worldShare}% world average</span></div>`);
+  const z = hazards.find(majorHazard); if (z) items.push(`<div class="s-item hz"><div class="label">Natural hazard · ${esc(z.kind.startsWith('gdacs') ? 'GDACS ' + hzLevel(z) : hzLevel(z))}</div><b>${esc(cap((z.extra && (z.extra.hazard || z.extra.weather)) || 'hazard'))} · ${esc((z.place || '').slice(0, 24))}</b><span>${esc(((z.extra && (z.extra.severity || z.extra.population)) || '').slice(0, 70))}</span></div>`);
+  const n = stops.length ? stops[(tourIdx + 1) % stops.length] : null;
+  if (n && n !== focus) items.push(`<div class="s-item${n.type === 'ongoing' ? ' ongoing' : ''}"><div class="label">${n.type === 'ongoing' ? 'Ongoing' : n.level} · up next</div><b>${esc(shortName(n))}</b><span>${esc(n.type === 'ongoing' ? 'Sustained conflict coverage' : (n.sources || []).some(x => /ioda|infra|radar/.test(x)) ? 'Cause not confirmed' : (n.headline || '').slice(0, 60))}</span></div>`);
+  $('sSide').innerHTML = items.join('');
+  $('sMeta').textContent = stops.length ? `${tourIdx + 1} / ${stops.length} · sources at ricochet.watch` : 'sources at ricochet.watch';
+}
+function renderTicker() {
+  const list = signals.filter(s => s.kind !== 'military_air' && s.source !== 'firms').slice(0, 30);
+  $('sTick').innerHTML = list.map(s => `<span><time>${hhmm(s.observed_at)}</time><i style="background:${SCOL(s.source)}"></i>${esc(s.title)}</span>`).join('');
+  $('sTick').style.animationDuration = Math.max(60, list.length * 9) + 's';
+}
+
+/* ================= Phone tabs ================= */
+let tab = 'tour', sheetOpen = false, feedSel = null;
+function renderPhonePanel() {
+  const p = $('pPanel');
+  if (tab === 'situations') p.innerHTML = `<div class="label">Ongoing situations</div>${situationsHTML(false)}<div style="margin-top:6px">${hazardsHTML(4)}</div>`;
+  else if (tab === 'watching') p.innerHTML = `<div class="label">Watching · ${watching.length} · needs a second source</div><div class="panel">${watchHTML(20)}</div><p class="note">A lone fire at a base outside any conflict is usually a planned burn, so it's held here until a nearby report names the site and an incident.</p>`;
+  else if (tab === 'signals') p.innerHTML = `<div class="label">Latest signals · 6 hours</div><div class="panel">${latestHTML(40)}</div>`;
+  else if (tab === 'feeds') {
+    const [sum, bad] = healthSummary();
+    p.innerHTML = `<div class="label">Feeds · ${esc(sum)}${bad ? ` · <span style="color:var(--bad)">${bad}</span>` : ''}</div><div class="chips">${healthChips(feedSel)}</div><div id="feedDetail"></div><p class="credits">${CREDITS}</p>`;
+    p.querySelectorAll('[data-feed]').forEach(b => b.onclick = () => { feedSel = feedSel === b.dataset.feed ? null : b.dataset.feed; renderPhonePanel(); });
+    if (feedSel) showFeed(feedSel);
+  }
+  wireStops(p);
+}
+async function showFeed(k) {
+  const box = $('feedDetail'); if (!box) return;
+  box.innerHTML = `<p class="note" style="margin:8px 0">${esc((health.sources[k] || {}).message || '')}</p><p class="empty">Loading…</p>`;
+  try { const d = await getJSON(`/api/signals?feed=${encodeURIComponent(k === 'airspace' ? 'adsb' : k)}&hours=72&limit=10`);
+    box.innerHTML = `<p class="note" style="margin:8px 0">${esc((health.sources[k] || {}).message || '')}</p><div class="panel">${d.signals.map(sigLine).join('') || '<p class="empty">Nothing in the last 72 hours.</p>'}</div>`;
+  } catch (e) { box.innerHTML = '<p class="empty">Couldn\'t load.</p>'; }
+}
+$$('#tabs [data-tab]').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab; $$('#tabs [data-tab]').forEach(x => x.classList.toggle('on', x === b));
+  $('pTour').hidden = tab !== 'tour'; $('pPanel').hidden = tab === 'tour';
+  if (tab !== 'tour') { renderPhonePanel(); $('sheet').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }); } else renderCard();
+});
+$('handle').onclick = () => { sheetOpen = !sheetOpen; renderCard(); };
+function wireStops(root) {
+  root.querySelectorAll('[data-stop]').forEach(b => b.onclick = () => { const i = stops.findIndex(s => s.key === b.dataset.stop);
+    if (i >= 0) { if (MODE === 'phone') { $$('#tabs [data-tab]')[0].click(); } jump(i); } });
+}
+
+/* ================= Health ================= */
+function renderHealth() {
+  const [sum, bad] = healthSummary();
+  if (MODE === 'phone') { $('pHealth').innerHTML = `${esc(sum)}${bad ? ` · <span class="bad">${bad}</span>` : ''}`; if (tab === 'feeds') renderPhonePanel(); }
+  if (MODE === 'wall') {
+    $('wHealthSum').innerHTML = `${esc(sum)}${bad ? ` · <span style="color:var(--bad)">${bad}</span>` : ''}`;
+    $('wFeeds').innerHTML = healthChips();
+    const down = Object.entries(health.sources).filter(([, v]) => healthState(v, health.now) === 'bad').map(([k, v]) => `${SRC[k]} down since ${v.last_ok ? hhmm(v.last_ok) : 'start'}`);
+    $('wFeedNote').textContent = down.length ? down.join(' · ') + ' — gaps are not events' : 'All feeds reporting.';
+  }
+}
+
+function renderHazardBadge() {
+  const b = $('hzBadge'); const z = hazards.find(s => /gdacs_red|tsunami_(warning|threat)/.test(s.kind));
+  if (MODE !== 'phone' || !z) { b.hidden = true; return; }
+  b.innerHTML = `${SWIRL}Natural hazard · ${esc((z.place || '').slice(0, 22))}`; b.hidden = false;
+}
+function renderAll() {
+  renderControls(); renderCard(); renderNext();
+  if (MODE === 'wall') renderWall();
+  if (MODE === 'stream') renderTicker();
+  if (MODE === 'phone') { const w = $('watchBadge'); w.hidden = !watching.length; w.textContent = watching.length; if (tab !== 'tour') renderPhonePanel(); }
+}
+
+/* ================= Globe ================= */
+const canvas = $('globe'), ctx = canvas.getContext('2d');
+const projection = d3.geoOrthographic().clipAngle(90).precision(.6), path = d3.geoPath(projection, ctx), graticule = d3.geoGraticule10();
+let land, borders, W, H, base, rot = [-20, -25], zoom = 1, tween = null;
+const PAL = {};
+function resize() {
+  const r = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  base = Math.min(W, H) * (MODE === 'stream' ? .5 : .46); projection.translate([W / 2, H / 2]);
+}
+addEventListener('resize', resize);
+function flyTo(lon, lat, z) { let dl = (-lon - rot[0]); dl = ((dl + 540) % 360) - 180; tween = { from: rot.slice(), to: [rot[0] + dl, -lat], z0: zoom, z1: z, t0: performance.now(), dur: reduce ? 1 : 1800 }; }
+let boxes = [], queued = [];
+const label = (x, y, a, b, col, big, prio = 1, center = false) => queued.push([prio, x, y, a, b, col, big, center]);
+function flushLabels() {
+  queued.sort((p, q) => q[0] - p[0]);
+  for (const [, x, y, a, b, col, big, center] of queued) { ctx.textAlign = center ? 'center' : 'left'; drawLabel(x, y, a, b, col, big); }
+  ctx.textAlign = 'left'; queued = [];
+}
+function drawLabel(x, y, a, b, col, big) {
+  ctx.font = `600 ${big ? 17 : 13}px "IBM Plex Mono", monospace`;
+  const w = Math.max(ctx.measureText(a.toUpperCase()).width, b ? ctx.measureText(b.toUpperCase()).width * .8 : 0), al = ctx.textAlign === 'center';
+  const bx = { x0: al ? x - w / 2 : x, x1: al ? x + w / 2 : x + w, y0: y - (big ? 18 : 14), y1: y + (b ? (big ? 20 : 16) : 4) };
+  if (boxes.some(o => bx.x0 < o.x1 && bx.x1 > o.x0 && bx.y0 < o.y1 && bx.y1 > o.y0)) return;   // keep the map readable: first label wins
+  boxes.push(bx);
+  ctx.font = `600 ${big ? 17 : 13}px "IBM Plex Mono", monospace`; ctx.textBaseline = 'alphabetic';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(11,17,24,.85)'; ctx.fillStyle = col;
+  ctx.strokeText(a.toUpperCase(), x, y); ctx.fillText(a.toUpperCase(), x, y);
+  if (b) { ctx.font = `500 ${big ? 12 : 10}px "IBM Plex Mono", monospace`; ctx.fillStyle = PAL.fg; ctx.strokeText(b.toUpperCase(), x, y + (big ? 17 : 14)); ctx.fillText(b.toUpperCase(), x, y + (big ? 17 : 14)); }
+}
+function swirl(x, y, r, t) {
+  ctx.strokeStyle = PAL.hz; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r * .35, 0, 7); ctx.stroke();
+  const a = reduce ? 0 : t / 900;
+  ctx.beginPath(); ctx.arc(x, y, r * .7, a, a + 1.6); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, r * .7, a + Math.PI, a + Math.PI + 1.6); ctx.stroke();
+}
+function draw(t) {
+  if (!PAL.ocean) Object.assign(PAL, { ocean: C('--ocean'), land: C('--land'), border: C('--border-c'), fg: C('--fg'), rep: C('--c-reported'), sig: C('--c-signal'), ongoing: C('--c-ongoing'), hz: C('--c-hazard') });
+  if (!land) return;
+  projection.scale(base * zoom).rotate(rot);
+  ctx.clearRect(0, 0, W, H); boxes = [];
+  const g = ctx.createRadialGradient(W / 2, H / 2, base * zoom * .2, W / 2, H / 2, base * zoom * 1.08);
+  g.addColorStop(0, '#13243a'); g.addColorStop(1, PAL.ocean);
+  ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); path(graticule); ctx.strokeStyle = 'rgba(135,150,166,.09)'; ctx.lineWidth = .6; ctx.stroke();
+  ctx.beginPath(); path(land); ctx.fillStyle = PAL.land; ctx.fill();
+  for (const s of situations) { const f = featureFor(s); if (!f) continue; const on = focus && focus.key === 'c:' + s.country;
+    ctx.beginPath(); path(f); ctx.fillStyle = on ? 'rgba(217,120,90,.55)' : 'rgba(217,120,90,.38)'; ctx.fill(); ctx.strokeStyle = PAL.ongoing; ctx.lineWidth = on ? 1.6 : .8; ctx.stroke(); }
+  ctx.beginPath(); path(borders); ctx.strokeStyle = PAL.border; ctx.lineWidth = .5; ctx.stroke();
+  const centre = [-rot[0], -rot[1]], vis = p => d3.geoDistance(p, centre) < Math.PI / 2 - .03;
+  for (const s of signals) { if (s.lat == null || !vis([s.lon, s.lat])) continue; const [x, y] = projection([s.lon, s.lat]);
+    const faint = s.kind === 'military_air' || s.source === 'firms'; ctx.beginPath(); ctx.arc(x, y, faint ? 1.8 : 3, 0, 7);
+    ctx.fillStyle = SCOL(s.source); ctx.globalAlpha = faint ? .4 : .9; ctx.fill(); ctx.globalAlpha = 1; }
+  for (const s of hazards) { if (s.lat == null || !vis([s.lon, s.lat])) continue; const [x, y] = projection([s.lon, s.lat]);
+    if (majorHazard(s)) { swirl(x, y, MODE === 'phone' ? 10 : 13, t); if (MODE !== 'phone' && !s.kind.startsWith('met')) label(x + 18, y - 2, (s.place || 'hazard').slice(0, 18), `${(s.extra && s.extra.hazard) || ''} · ${hzLevel(s)}`, PAL.hz, false, 3); }
+    else { ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fillStyle = PAL.hz; ctx.globalAlpha = .7; ctx.fill(); ctx.globalAlpha = 1; } }
+  for (const h of hotspots) { if (!vis([h.lon, h.lat])) continue;
+    const [x, y] = projection([h.lon, h.lat]), col = h.level === 'reported' ? PAL.rep : PAL.sig, on = focus && focus.cell === h.cell;
+    if (!reduce) { const p = (t / 1600) % 1; ctx.beginPath(); ctx.arc(x, y, 8 + p * 22, 0, 7); ctx.strokeStyle = col; ctx.globalAlpha = (1 - p) * .9; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1; }
+    ctx.beginPath(); ctx.arc(x, y, on ? 11 : 7, 0, 7); ctx.strokeStyle = col; ctx.lineWidth = on ? 3 : 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, on ? 5 : 3, 0, 7); ctx.fillStyle = col; ctx.fill();
+    if (MODE !== 'phone' && (on || h.level === 'reported')) label(x + 18, y - 3, shortName(h).slice(0, 22), `${h.level} · ${h.confidence ?? ''}`, col, on && MODE === 'stream', on ? 9 : 5); }
+  if (MODE !== 'phone') for (const s of situations.slice(0, 3)) { const f = featureFor(s); if (!f || !vis(f.c)) continue; const [x, y] = projection(f.c); label(x, y + 26, s.name, s.state, PAL.ongoing, false, focus && focus.key === 'c:' + s.country ? 8 : 2, true); }
+  flushLabels();
+  ctx.beginPath(); path({ type: 'Sphere' }); ctx.strokeStyle = 'rgba(135,150,166,.4)'; ctx.lineWidth = 1.2; ctx.stroke();
+}
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.25, (now - last) / 1000); last = now;
+  if (tween) { const k = Math.min(1, (now - tween.t0) / tween.dur), e = d3.easeCubicInOut(k);
+    rot = [tween.from[0] + (tween.to[0] - tween.from[0]) * e, tween.from[1] + (tween.to[1] - tween.from[1]) * e]; zoom = tween.z0 + (tween.z1 - tween.z0) * e; if (k >= 1) tween = null;
+  } else if (!focus && !reduce) rot[0] += dt * 6;
+  if (manual && now - lastTouch > PAUSE_RESUME) resume();
+  if (now > phaseEnd) { phaseEnd = now + 60000; next(); }
+  const pct = manual ? 0 : Math.min(100, Math.max(0, 100 * (1 - (phaseEnd - now) / dwellTotal)));
+  $$('[data-prog]').forEach(p => p.style.width = pct + '%');
+  const iso = new Date().toISOString(); $$('[data-clock]').forEach(c => c.textContent = iso.slice(11, 19) + 'Z');
+  draw(now); requestAnimationFrame(frame);
+}
+
+/* ================= Input ================= */
+$('keyBtn').onclick = () => { const o = $('key').hidden; $('key').hidden = !o; $('keyBtn').setAttribute('aria-expanded', o); };
+if (MODE === 'wall') { $('key').hidden = false; }
+addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea')) return;
+  if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1);
+  else if (e.key === ' ' && MODE !== 'stream') { e.preventDefault(); manual ? resume() : pause(); }
+});
+if (MODE !== 'stream') {
+  canvas.addEventListener('click', e => {
+    const r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, centre = [-rot[0], -rot[1]];
+    let best = -1, bd = 28 * 28;
+    stops.forEach((h, i) => { if (d3.geoDistance([h.lon, h.lat], centre) > Math.PI / 2 - .03) return; const [x, y] = projection([h.lon, h.lat]); const d = (x - px) ** 2 + (y - py) ** 2; if (d < bd) { bd = d; best = i; } });
+    if (best >= 0) jump(best);
+  });
+  // Drag the globe sideways to explore; vertical swipes stay with the page on phones
+  let drag = null, dragged = false;
+  canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, r: rot.slice() }; dragged = false; });
+  canvas.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!dragged && Math.hypot(dx, dy) < 6) return; if (!dragged) { dragged = true; pause(); tween = null; }
+    const k = 90 / (base * zoom); rot = [drag.r[0] + dx * k, Math.max(-80, Math.min(80, drag.r[1] - (e.pointerType === 'mouse' ? dy * k : 0)))]; });
+  const end = () => { if (drag && dragged) lastTouch = performance.now(); drag = null; setTimeout(() => dragged = false, 0); };
+  canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end); canvas.addEventListener('pointerleave', end);
+}
+if (MODE === 'phone') {   // swipe the sheet for next/previous; swipe up opens it
+  const sh = $('sheet'); let x0 = null, y0 = 0, t0 = 0;
+  sh.addEventListener('touchstart', e => { if (tab !== 'tour') return; const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, { passive: true });
+  sh.addEventListener('touchend', e => { if (x0 === null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+    if (Date.now() - t0 > 800) return;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy)) move(dx < 0 ? 1 : -1);
+    else if (Math.abs(dy) > 50 && Math.abs(dy) > 1.5 * Math.abs(dx) && e.target.closest('.handle, .sheet-hint, .nav')) { sheetOpen = dy < 0; pause(); renderCard(); } }, { passive: true });
+  $('cardP').addEventListener('click', e => { if (e.target.closest('.sheet-hint')) { sheetOpen = !sheetOpen; if (sheetOpen) pause(); renderCard(); } });
+}
+
+/* ================= Intro ================= */
+(() => {
+  const box = $('intro'); let seen = MODE !== 'phone' && MODE !== 'wall'; try { seen = seen || !!localStorage.getItem('introSeen'); } catch (e) {}
+  if (MODE === 'wall') seen = true;   // a wall screen has no one to dismiss it
+  if (!seen) setTimeout(() => box.hidden = false, 1200);
+  $('introOk').onclick = () => { box.hidden = true; if ($('introNever').checked) { try { localStorage.setItem('introSeen', '1'); } catch (e) {} } };
+  $$('[data-help]').forEach(b => b.onclick = () => box.hidden = false);
+})();
+
+/* ================= Start ================= */
+(async () => {
+  const wd = () => { const d = new Date(); const s = d.toUTCString().slice(0, 11).toUpperCase().replace(',', ''); if ($('wDate')) $('wDate').textContent = s; if ($('sDate')) $('sDate').textContent = s + ' · UTC'; };
+  wd(); setInterval(wd, 60000);
+  try {
+    const world = await getJSON('world.json');
+    land = topojson.merge(world, world.objects.countries.geometries);
+    countryFeats = topojson.feature(world, world.objects.countries).features.map(f => Object.assign(f, { c: d3.geoCentroid(f), b: d3.geoBounds(f) }));
+    borders = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
+  } catch (e) { console.warn('map', e); }
+  resize(); renderAll();
+  requestAnimationFrame(frame);          // globe and clock start straight away; data fills in as it arrives
+  refreshHealth(); await refresh();
+  setInterval(refresh, 60000); setInterval(refreshHealth, 30000);
+})();
+</script>
+</body>
+</html>
