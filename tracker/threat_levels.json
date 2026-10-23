@@ -1,0 +1,12 @@
+{
+  "_note": "Hand-kept national terrorism threat levels for country cards. Change rarely; the morning audit re-checks each against its official page daily. Only add a country once its level is confirmed from an official page.",
+  "levels": {
+    "GB": {"label": "UK national threat level", "level": "Substantial", "meaning": "an attack is likely",
+           "url": "https://www.mi5.gov.uk/threat-levels", "checked": "2026-10-24", "via": "ProtectUK (Counter Terrorism Policing)"},
+    "NL": {"label": "Netherlands threat level (NCTV)", "level": "4 of 5 (substantial)", "meaning": "a real chance of an attack",
+           "url": "https://www.nctv.nl/onderwerpen/dtn", "checked": "2026-10-24", "via": "NCTV, maintained in the June 2026 DTN"},
+    "FR": {"label": "France Vigipirate", "level": "Vigilance renforcée", "meaning": "middle of three stages (summer-autumn 2026 posture)",
+           "url": "https://www.interieur.gouv.fr/actualites/actualites-du-ministere/mise-en-oeuvre-du-plan-vigipirate-2026", "checked": "2026-10-24",
+           "via": "Ministère de l'Intérieur, 25 Jun 2026; audit to confirm it still applies"}
+  }
+}

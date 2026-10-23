@@ -345,6 +345,7 @@ function renderCard() {
     <h2>${esc(nameOf(focus))}</h2>
     ${focus.site ? `<p class="stat">Sensitive site: <b>${esc(focus.site.name)}</b> (${esc(focus.site.kind)})</p>` : ''}
     ${focus.reason ? `<p class="stat">Why it's here: ${esc(focus.reason.split(' · expected:')[0])}</p>` : ''}
+    ${focus.threat_level ? `<p style="margin:0;font-size:12px;color:var(--muted)">${esc(focus.threat_level.label)}: <b>${esc(focus.threat_level.level)}</b> (${esc(focus.threat_level.meaning)}). <a href="${esc(focus.threat_level.url)}" target="_blank" rel="noopener">Official page</a></p>` : ''}
     ${focus.expected ? `<p class="expected"><b>Expected: ${esc(focus.expected.name)}.</b> ${esc(focus.expected.note)} Check before escalating.</p>` : ''}
     <p class="note">Automated tripwire signals, compared with this area's normal level. Nothing here is confirmed: no investigator agent or human review yet. First signal ${hhmm(focus.first)}Z, latest ${hhmm(focus.last)}Z, ${focus.count} signals.</p>
     <div style="display:grid;gap:10px"><div class="sec-label">Signals here, by feed</div>${items || '<p class="empty">Loading…</p>'}</div>

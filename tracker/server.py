@@ -29,6 +29,20 @@ _cache = {}
 conflict_zone = rules.conflict_zone
 
 
+_threat = {}
+
+
+def threat_level(iso):
+    """National threat level for a country card, from the hand-kept table (or None)."""
+    if not _threat:
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "threat_levels.json"), encoding="utf-8") as f:
+                _threat.update(json.load(f)["levels"])
+        except (OSError, ValueError, KeyError):
+            _threat["_"] = None
+    return _threat.get(iso) if iso else None
+
+
 def hotspots(con, hours=6, limit=40, watch=False):
     """Cached for a minute: the baseline maths is the heavy part on a small machine.
     "watch" items (lone fires at bases waiting for a second source) are left off the globe."""
@@ -124,6 +138,8 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             "reason": reason,
             "expected": {"name": expected_event["name"], "note": expected_event["note"]} if expected_event else None,
             "site": site,
+            "country": (cc := rules.country_of(cell, items)),
+            "threat_level": threat_level(cc),
             "first": items[0]["observed_at"],
             "last": items[-1]["observed_at"],
         })

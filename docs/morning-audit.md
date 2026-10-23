@@ -54,9 +54,13 @@ Read the previous scorecards, benchmark list and candidate-sources table there f
     Never propose ways around a site's anti-bot blocks or access
     restrictions.
 
-4. Maintenance. Check /api/health and /api/sources:
+4. Maintenance. Read /api/audit first (the server's own daily feed and collector check, run
+   at 04:xx UTC; it auto-retires feeds refusing us with 403/429 for 3+ days and lists them
+   under for_claude). Then check /api/health and /api/sources:
    - feeds failing, dead, quiet over 1 hour, silent for weeks, or rate-limited
    - baselines still learning, collector errors visible publicly
+   - threat levels: check each entry in tracker/threat_levels.json against its official
+     page; a change is a safe repair (give the new level, its meaning and the page date)
    SAFE REPAIRS (list each under "For Claude to apply" in the report, with the
    exact feed name and URL; Claude applies them without asking Shane):
    - retire a feed that has been failing or dead for 3+ days
