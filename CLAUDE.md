@@ -246,7 +246,14 @@ All three below are rules changes: replay against the benchmark set first, Shane
   quick-win sources fitted round them.
 
 
-### Google Cloud free tier (21 Oct; proposals, Shane to decide)
+### Decided 23 Oct (Shane)
+
+- Rule changes: Claude may ship any change that gains benchmark hits with zero extra false
+  alarms; anything with a trade-off goes to Shane.
+- BigQuery: yes, Shane will create a read-only service-account key (walk him through it).
+- Move the VM to a free-tier US region: yes.
+
+### Google Cloud free tier (21 Oct)
 
 - **The VM isn't on the free tier.** Free e2-micro (plus 30 GB *standard* disk, 1 GB/month
   egress) only applies in us-west1, us-central1 or us-east1; ours is in europe-west2 (London),
