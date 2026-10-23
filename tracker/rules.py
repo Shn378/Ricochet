@@ -172,7 +172,7 @@ def decide(feeds, cell, expected, sites_by_source=None, hot_countries=None, near
 
 # "73 killed", "dozens dead", "death toll rises to 153"
 _TOLL = re.compile(r"\b(\d{1,4}|dozens|scores|hundreds)\s+(?:people\s+|civilians\s+|were\s+|are\s+|others\s+)?(?:killed|dead|died|deaths|massacred)\b"
-                   r"|\b(?:death toll|toll)\b\D{0,20}?(\d{1,4})\b"
+                   r"|(?<!injury )(?<!injured )\b(?:death toll|toll)\b[a-z ,]{0,20}?(\d{1,4})\b"
                    r"|\bkill(?:s|ed|ing)\s+(?:at least\s+|more than\s+|over\s+)?(\d{1,4}|dozens|scores|hundreds)\b", re.I)
 SEVERITY_MIN = 10
 

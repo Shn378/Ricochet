@@ -40,6 +40,10 @@ class FlagRules(unittest.TestCase):
         self.assertEqual(rules.death_toll("Death toll rises to 153 in Abyei"), 153)
         self.assertEqual(rules.death_toll("Dozens dead after market attack"), 24)
         self.assertIsNone(rules.death_toll("Remembering the 1918 dead"))
+        # injury tolls and URL ids aren't death tolls
+        self.assertEqual(rules.death_toll("Russian strike on Lozova market: Two killed, injury toll rises to 36"), None)
+        self.assertIsNone(rules.death_toll("https://e.com/news/death-toll/20261022/1147"))
+        self.assertEqual(rules.death_toll("Death toll climbs to 42 after floods"), 42)
 
     def test_severity_and_national_via_evaluate(self):
         hist = {"gdelt": 200, "news": 200}

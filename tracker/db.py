@@ -19,6 +19,9 @@ RAW_DIR = os.path.join(DATA, "raw")
 
 _lock = threading.Lock()
 CONTEXT_KINDS = {"military_air", "squawk_routine", "probation_report"}   # shown on the map, never counted towards alerts
+# Natural hazards and official public alerts (collectors/hazards.py): context until Shane decides
+CONTEXT_KINDS |= {"gdacs_red", "gdacs_orange", "gdacs_green", "tsunami_warning", "tsunami_threat",
+                  "tsunami_advisory", "tsunami_watch", "tsunami_information", "uk_alert"}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS signals (

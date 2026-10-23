@@ -13,7 +13,7 @@
   --fg: #dfe7ee; --muted: #8796a6; --ocean: #0f1d2b; --land: #253546; --border-c: #3a4d61;
   --accent: #e9b44c;
   --c-signal: #7f9bb5; --c-reported: #e9b44c;
-  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7; --s-radar: #d29df0; --s-ais: #4f8fe0; --s-infra: #e06c9f;
+  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7; --s-radar: #d29df0; --s-ais: #4f8fe0; --s-infra: #e06c9f; --s-hazard: #c5d86d;
   --ok: #46b37b; --c-ongoing: #d9785a; --warn: #e9b44c; --bad: #e5484d;
   --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --f-body: "IBM Plex Sans", system-ui, "Segoe UI", sans-serif;
@@ -162,6 +162,7 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
       <span><i style="background:var(--s-seismic)"></i>Seismic</span>
       <span><i style="background:var(--s-ais)"></i>Shipping</span>
       <span><i style="background:var(--s-infra)"></i>Infrastructure</span>
+      <span><i style="background:var(--s-hazard)"></i>Hazards (not security)</span>
       <span><i style="background:var(--c-ongoing)"></i>Ongoing situation</span>
       <span><i style="background:transparent;border:2px solid var(--c-reported)"></i>Hotspot: reported</span>
       <span><i style="background:transparent;border:2px solid var(--c-signal)"></i>Hotspot: signal</span>
@@ -172,14 +173,14 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
   <section class="card" id="card"></section>
 </div>
 <section class="stream"><h3>Latest signals</h3><div id="latest"></div></section>
-<footer class="credits">Data: <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a> · <a href="https://ioda.inetintel.cc.gatech.edu/" target="_blank" rel="noopener">IODA</a> · <a href="https://radar.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Radar</a> · <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> · <a href="https://www.wikimedia.org/" target="_blank" rel="noopener">Wikimedia</a> · <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a> · <a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a> · aircraft from <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a> · places from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> and <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> · news from the outlets linked in each signal</footer>
+<footer class="credits">Data: <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a> · <a href="https://ioda.inetintel.cc.gatech.edu/" target="_blank" rel="noopener">IODA</a> · <a href="https://radar.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Radar</a> · <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> · <a href="https://www.wikimedia.org/" target="_blank" rel="noopener">Wikimedia</a> · <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a> · <a href="https://www.gdacs.org/" target="_blank" rel="noopener">GDACS</a> (CC BY 4.0) · <a href="https://www.tsunami.gov/" target="_blank" rel="noopener">NOAA tsunami centres</a> · <a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a> · aircraft from <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a> · places from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> and <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> · news from the outlets linked in each signal</footer>
 
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
 <script>
 const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue(k).trim();
-const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace', radar: 'Cloudflare Radar', ais: 'Shipping', infra: 'Infrastructure' };
-const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic','radar','ais','infra'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
+const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace', radar: 'Cloudflare Radar', ais: 'Shipping', infra: 'Infrastructure', hazard: 'Natural hazards & public alerts (not security incidents)' };
+const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic','radar','ais','infra','hazard'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
 const SCOL = s => SCOLS[s] || '#8796a6';
 const PAL = {};
 const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);

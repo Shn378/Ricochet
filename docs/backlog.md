@@ -15,6 +15,20 @@ Done 23 Oct (Fri night):
 - R2 archive (`tracker/archive.py`): daily digest + hourly hotspot log + frozen benchmark files,
   first upload after 01:00 UTC 24 Oct. SigV4 verified against AWS examples, not yet against R2.
 
+Done 24 Oct (00:00-01:00):
+- Health after the move: all 11 collectors OK, 46/46 news feeds, all baselines ready.
+- First benchmark (commit 90b929d, 40 min on the e2-micro): current rules 11/26 hits, 4 Reported,
+  median lead -165 min (hotspots open ~2¾ h AFTER the first public report). No flag met the
+  ship rule (hits gained + zero extra openings), so all flags stay off; trade-offs sent to Shane:
+  pair_signal +1 hit (mirage-20) / +14 openings; severity +2 (riyadh-20, tendelti-20) / +23;
+  listed_conflicts +1 (bryansk-21) / +75 (mostly unplaced crop-burning fires);
+  median_baseline +2 (riyadh-20, tendelti-20) / +85 (US local crime, base range fires);
+  quake_strict 0 hits / 3 fewer openings; national_no_open no effect at all.
+- Benchmark sped up ~14x (shared per-hour work, one baseline pass, low CPU priority); identical results.
+- severity: death-toll regex no longer reads injury tolls or URL ids as deaths.
+- New `hazards` collector (GDACS red/orange, NOAA PTWC/NTWC): context only until Shane decides
+  whether GDACS red / tsunami warnings can open a hotspot. GOV.UK alerts parked: needs alert-area shapes.
+
 Next, in order:
 1. Check `/api/health` (all feeds back after the move) and `/api/benchmark`. If the benchmark
    errors, ask Shane for `journalctl -u ricochet --since -1h | grep -i bench`.
@@ -27,7 +41,7 @@ Next, in order:
 5. Gemini morning audit: write its prompt (based on docs/morning-audit.md) writing to a Google Doc
    in a "Ricochet audits" Drive folder that Claude reads via the Drive connector.
 6. Deterministic half of the audit as `audit.py` on the VM (feed health, auto-retire 3-day 403s).
-7. Quick-win sources: GDACS, NOAA tsunami, GOV.UK alerts, threat levels, Met Office context.
+7. Quick-win sources: GDACS + NOAA tsunami done (context); GOV.UK alerts (placement), threat levels, Met Office context still to do.
 8. UI build (three modes, docs/ui) — biggest chunk; may slip to next weekend.
 Also pending: add the 23 Oct audit's incidents to docs/benchmark.json (Shane to paste the report);
 Arab News + LBCI on probation once the audit gives confirmed feed URLs; uptime alert in Cloud

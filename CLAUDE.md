@@ -75,6 +75,8 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
     military counts, and 10 flashpoint regions for airspace emptying + GPS jamming)
   - `ais` (aisstream.io WebSocket: ships per 15 min at 10 chokepoints)
   - `infra` (Google Cloud, Cloudflare, GitHub, Azure, AWS status pages)
+  - `hazards` (GDACS red/orange + NOAA tsunami centres; source `hazard`, all context kinds:
+    shown in lime, never counted. GOV.UK alerts parser written but not polled: placement not good enough)
   - `news` (RSS/Atom via the attention budget)
 - `tracker/attention.py`: news "attention budget": 30 checks/min shared by heat.
   Backbone in `tracker/backbone.json` (46 feeds; Al Arabiya EN retired 22 Oct after 403s on probation). Layer 2 backbone, 3 leased (not built),
