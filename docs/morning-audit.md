@@ -2,7 +2,8 @@ Ricochet morning audit (runs daily 05:45 UK time)
 
 Context: Ricochet (ricochet.watch) is Shane's global conflict/incident tracker.
 Read CLAUDE.md in the GitHub repo Shn378/Ricochet first: it has the principles,
-code map, current rules and backlog. Attach that repo before pushing any repair.
+code map, current rules and backlog. You can't push to the repo: Shane pastes this
+report into the Ricochet project session, where Claude applies the safe repairs.
 Public API: /api/hotspots?hours=24&watch=1, /api/signals?hours=24[&feed=x|&cell=lat:lon],
 /api/health, /api/sources, /api/situations?all=1.
 Use feed=, never source= (the fetch tool strips "source"). Add a unique
@@ -56,7 +57,8 @@ Read the previous scorecards, benchmark list and candidate-sources table there f
 4. Maintenance. Check /api/health and /api/sources:
    - feeds failing, dead, quiet over 1 hour, silent for weeks, or rate-limited
    - baselines still learning, collector errors visible publicly
-   SAFE REPAIRS you may push (tests must pass; list each in the report):
+   SAFE REPAIRS (list each under "For Claude to apply" in the report, with the
+   exact feed name and URL; Claude applies them without asking Shane):
    - retire a feed that has been failing or dead for 3+ days
    - update a feed to a new address, only after confirming the new
      address returns a valid feed
@@ -71,8 +73,11 @@ Read the previous scorecards, benchmark list and candidate-sources table there f
    Label each proposal: general improvement / conditional (one region,
    source or event type) / overfitting risk (explains one incident only).
 
-6. Only push the safe repairs listed in step 4. Everything else is a
-   proposal for Shane to approve. If something needs a look inside the
+6. End with a "For Claude to apply" block: the safe repairs from step 4 and any
+   probation candidates, each with the exact feed URL you confirmed returns a
+   valid feed today (Claude's session often can't fetch sites to check).
+   A feed returning 403 or 429 on every check for 3+ days is retired, never
+   worked around. Everything else is a proposal for Shane to approve. If something needs a look inside the
    server, list the exact one-line command for Shane to run in the VM's
    SSH window.
 

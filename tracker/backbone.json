@@ -259,13 +259,6 @@
    "url": "https://www.gov.uk/government/organisations/ministry-of-defence.atom",
    "country": "GB",
    "type": "official"
-  },
-  {
-   "name": "Al Arabiya (EN)",
-   "url": "https://english.alarabiya.net/feed/rss2/en.xml",
-   "country": null,
-   "probation": true,
-   "since": "2026-10-21"
   }
  ]
 }

@@ -76,7 +76,7 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   - `infra` (Google Cloud, Cloudflare, GitHub, Azure, AWS status pages)
   - `news` (RSS/Atom via the attention budget)
 - `tracker/attention.py`: news "attention budget": 30 checks/min shared by heat.
-  Backbone in `tracker/backbone.json` (46 feeds + Al Arabiya EN on probation since 21 Oct). Layer 2 backbone, 3 leased (not built),
+  Backbone in `tracker/backbone.json` (46 feeds; Al Arabiya EN retired 22 Oct after 403s on probation). Layer 2 backbone, 3 leased (not built),
   4 earned (not built), **5 probation** (`"probation": true`: shown on cards/map, tallied,
   never counts towards a hotspot). Feeds removed from the JSON are marked retired.
 - `tracker/baseline.py`: hourly buckets per 1° cell; same-hours-of-day expectations;
