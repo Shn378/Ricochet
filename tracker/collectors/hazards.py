@@ -80,7 +80,9 @@ def parse_gdacs(payload, now=None):
         g = lambda tag: (it.findtext(tag, namespaces=NS) or "").strip()
         lat, lon = _f(g("geo:Point/geo:lat")), _f(g("geo:Point/geo:long"))
         level = g("gdacs:alertlevel").lower()
-        t = _t(g("gdacs:fromdate")) or _t(g("pubDate"))
+        start = _t(g("gdacs:fromdate"))
+        # An ongoing event (a cyclone tracked for days) is dated by GDACS's latest update, not its start
+        t = _t(g("gdacs:datemodified")) or _t(g("pubDate")) or start
         if lat is None or lon is None or level not in GDACS_SCORE or not t:
             continue
         if level == "green":      # minor impact: ignored (backlog decision), keeps the map clean
@@ -102,7 +104,7 @@ def parse_gdacs(payload, now=None):
             "country": None,
             "extra": {"hazard": EVENT.get(etype, etype.lower()), "alert": level, "iso3": g("gdacs:iso3") or None,
                       "severity": g("gdacs:severity") or None, "population": g("gdacs:population") or None,
-                      "credit": "GDACS"},
+                      "started": start, "credit": "GDACS"},
         })
     return out
 
