@@ -205,6 +205,8 @@ def main():
         from .attention import Budget
         threading.Thread(target=Budget(cfg, log).run, daemon=True, name="news").start()
     threading.Thread(target=housekeeping, args=(con, cfg.getint("general", "keep_days")), daemon=True).start()
+    from . import benchmark
+    threading.Thread(target=benchmark.runner, args=(log,), daemon=True, name="benchmark").start()
     port = cfg.getint("general", "port")
     log(f"Ricochet running (Tripwire engine). Open http://localhost:{port}")
     try:

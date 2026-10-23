@@ -56,7 +56,8 @@ Check the live site via the public API; add a throwaway `?v=<n>` because the web
 caches pages for 15 minutes:
 `/api/hotspots?hours=6[&watch=1]`, `/api/signals?hours=24[&cell=lat:lon|&feed=x|&country=FIPS]`
 (use `feed=`, not `source=`: the web-fetch tool strips `source` as a tracking parameter),
-`/api/health`, `/api/sources`, `/api/situations?all=1`, `/api/near` (tuning).
+`/api/health`, `/api/sources`, `/api/situations?all=1`, `/api/near` (tuning), `/api/benchmark`.
+The workspace can also reach the live API with curl (no web-fetch quota).
 `/api/replay` and `/api/shutdown` only answer genuine local requests on the server.
 
 ## How it works (code map)
@@ -81,7 +82,10 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   never counts towards a hotspot). Feeds removed from the JSON are marked retired.
 - `tracker/baseline.py`: hourly buckets per 1° cell; same-hours-of-day expectations;
   z = (obs−exp)/sqrt(exp+1); elevated = z≥3 and ratio≥2 (FIRMS 4). Fixed rules when no baseline.
-- `tracker/rules.py` (shared by live and replay): `decide()`. Reported = two feeds *above their
+- `tracker/rules.py`: `evaluate()` is the one decision path for the live globe, replay and the
+  benchmark (feeds vs normal, `decide()`, expected-event hold). `FLAGS` switch proposed rule changes
+  on/off (pair_signal, national_no_open, quake_strict, severity, listed_conflicts, median_baseline).
+  `decide()`: Reported = two feeds *above their
   own normal* (`above_normal`), one well above. Fires alone count only near an
   ongoing/escalating country, and a lone seismic event only near one, at a site, or if it
   scores 5+ (nuclear). Sensitive sites (Wikidata, 9,303) lift physical signals; a Wikipedia
@@ -91,6 +95,11 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
 - `tracker/server.py`: hotspots (confidence 0-100 orders the tour), API.
 - `tracker/situations.py`: country-level Ongoing/Escalating from GDELT conflict share.
 - `tracker/replay.py`: rebuilds a past incident's signals and simulates the live rules.
+- `tracker/benchmark.py`: replays every audited incident (`docs/benchmark.json`, frozen evidence in
+  `data/benchmark/`) plus the last 3 days of live traffic under each `FLAGS` variant. Runs on the
+  server after each deploy and daily; results at `/api/benchmark` (`?detail=1` per incident).
+  A flag goes live (default True) only when it gains hits with no extra openings, else Shane decides.
+- `tracker/conflicts.py`: hand-kept list of armed conflicts (optionally boxed), for `listed_conflicts`.
 - `tracker/places.py` + `gazetteer.json.gz`: placing stories (GeoNames ≥15k, demonyms, leaders).
 
 ## Working method

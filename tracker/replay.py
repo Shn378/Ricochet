@@ -17,7 +17,7 @@ import time
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 
-from . import baseline, db, rules, sites
+from . import baseline, db, places, rules, sites
 from .collectors import firms, gdelt, wiki as wikic
 from .net import get
 
@@ -96,26 +96,18 @@ def firms_area(key, lat, lon, start, end, pad=1.0, notes=None):
     return [s for s in out if start <= s["observed_at"] <= end]
 
 
-def simulate(series, cell, expected, history, steps, con=None):
-    """Re-run the live hotspot rules (rules.decide) every 15 minutes over the replayed signals."""
+def simulate(series, cell, expected, history, steps, con=None, hot_countries=None):
+    """Re-run the live hotspot rules (rules.evaluate, the same path the globe uses) every
+    15 minutes over the replayed signals."""
     timeline = []
     for t in steps:
-        feeds, site_by = {}, {}
-        for src, sigs in series.items():
-            here = [s for s in sigs if s["cell"] == cell and t - 6 * 3600 < s["t"] <= t]
-            obs = sum(s["score"] for s in here)
-            if obs:
-                z, ratio, elevated = baseline.judge(obs, expected.get((cell, src), 0.0), src, history.get(src, 0))
-                feeds[src] = {"observed": round(obs, 1), "z": round(z, 1), "elevated": elevated,
-                              "expected": round(expected.get((cell, src), 0.0), 2),
-                              "baseline": history.get(src, 0) >= baseline.MIN_HISTORY_HOURS}
-                for s in here:
-                    if s.get("site"):
-                        site_by.setdefault(src, s["site"])
+        items = [dict(s, source=src) for src, sigs in series.items() for s in sigs if s["cell"] == cell and t - 6 * 3600 < s["t"] <= t]
         around = set(rules.neighbours(cell))
         nearby = [(src, s.get("text", "")) for src, sigs in series.items() for s in sigs if s["cell"] in around and t - 6 * 3600 < s["t"] <= t]
-        level, reason, site = rules.decide(feeds, cell, expected, site_by, None, nearby) if feeds else (None, None, None)
-        timeline.append({"t": iso(t), "feeds": feeds, "level": level, "note": reason if not level else None, "reason": reason})
+        ev = rules.evaluate(cell, [dict(i, extra={"site": i.get("site")}, title=i.get("text", "")) for i in items],
+                            expected, history, hot_countries, nearby, now=t)
+        level, reason = ev["level"], ev["reason"]
+        timeline.append({"t": iso(t), "feeds": ev["feeds"], "level": level, "note": reason if not level else None, "reason": reason})
     return timeline
 
 
@@ -129,7 +121,7 @@ def run(lat, lon, start, end, wiki_titles=(), keywords=(), log=print, firms_key=
 
     # Normal level for this square from stored history (same-hours-of-day method as live)
     exp_by = {}
-    expected, history = baseline.expectations(con, 6)
+    expected, history = baseline.expectations(con, 6, now=end, median=rules.FLAGS["median_baseline"])
     exp6 = expected.get((cell, "gdelt"), 0.0)
     report["baseline"] = {"gdelt_expected_per_6h": round(exp6, 2), "history_hours": history.get("gdelt", 0)}
 
@@ -147,7 +139,7 @@ def run(lat, lon, start, end, wiki_titles=(), keywords=(), log=print, firms_key=
             near = km(lat, lon, s["lat"], s["lon"]) <= RADIUS_KM
             kw = any(k in (s.get("url") or "").lower() or k in (s.get("place") or "").lower() for k in keywords)
             if near or kw:
-                found.append({"slot": int(slot.timestamp()), "near": near, "keyword": kw, "place": s.get("place"),
+                found.append({"slot": int(slot.timestamp()), "near": near, "keyword": kw, "place": s.get("place"), "kind": s.get("kind"),
                               "title": s["title"], "url": s["url"], "score": s["score"], "cell": db.cell_of(s["lat"], s["lon"])})
         n += 1
         if n % 8 == 0:
@@ -192,7 +184,7 @@ def run(lat, lon, start, end, wiki_titles=(), keywords=(), log=print, firms_key=
             if hit and coords:
                 sig = {"source": "wiki", "lat": coords[0], "lon": coords[1], "score": hit[3], "extra": {}}
                 sig = sites.tag_and_filter(con, [sig])[0]
-                wiki_series.append({"t": r["t"], "cell": db.cell_of(*coords), "score": hit[3], "site": sig["extra"].get("site")})
+                wiki_series.append({"t": r["t"], "cell": db.cell_of(*coords), "score": hit[3], "kind": "edit_burst", "site": sig["extra"].get("site")})
                 tiers.append(f"{iso(r['t'])}: tier {hit[2] + 1} ({hit[0]} edits by {hit[1]} editors)")
         report["wiki"][title] = {"coordinates": coords, "burst_tiers": tiers, "edits": len(revs), "first_edit": iso(revs[0]["t"]) if revs else None,
                                  "burst_rule_fires": burst, "first_edits": [dict(r, t=iso(r["t"])) for r in revs[:8]]}
@@ -217,14 +209,20 @@ def run(lat, lon, start, end, wiki_titles=(), keywords=(), log=print, firms_key=
             report["notes"].append(f"FIRMS failed: {e}")
 
     # Step through the window with the live rules
-    series = {"gdelt": [{"t": f["slot"] + 15 * 60, "cell": f["cell"], "score": f["score"],
+    series = {"gdelt": [{"t": f["slot"] + 15 * 60, "cell": f["cell"], "score": f["score"], "kind": f.get("kind", "conflict_report"),
                          "text": f"{f.get('title', '')} {f.get('url', '')}"} for f in found],
               "wiki": wiki_series,
-              "firms": [{"t": f["observed_at"] + 3 * 3600, "cell": db.cell_of(f["lat"], f["lon"]), "score": f["score"],
+              "firms": [{"t": f["observed_at"] + 3 * 3600, "cell": db.cell_of(f["lat"], f["lon"]), "score": f["score"], "kind": f.get("kind", "heat"),
                          "site": f["extra"].get("site")} for f in fires]}
     # (FIRMS publishes ~3 hours after the satellite pass, so a fire counts from pass time + 3h)
     steps = list(range(start - start % 900, end + 1, 900))
-    tl = simulate(series, cell, expected, history, steps, con)
+    from . import situations
+    try:
+        hot_cc = {places.FIPS_TO_ISO[c["country"]] for c in situations.compute(con, now=start)["countries"]
+                  if c["ongoing"] and c["country"] in places.FIPS_TO_ISO}
+    except Exception:
+        hot_cc = None
+    tl = simulate(series, cell, expected, history, steps, con, hot_cc)
     first = {}
     for row in tl:
         for key in ("signal", "reported"):

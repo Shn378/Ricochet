@@ -40,19 +40,8 @@ def hotspots(con, hours=6, limit=40, watch=False):
     return [h for h in hit[1] if watch or h["level"] != "watch"][:limit]
 
 
-_country_cache = {}
-
-
 def _country_of(cell, items):
-    """Country for a square: from its signals if they say, else the nearest town."""
-    for s in items:
-        if s.get("country") and len(s["country"]) == 2 and s["source"] != "gdelt":
-            return s["country"]
-    if cell not in _country_cache:
-        from .places import nearest_country
-        la, lo = map(int, cell.split(":"))
-        _country_cache[cell] = nearest_country(la + 0.5, lo + 0.5)
-    return _country_cache[cell]
+    return rules.country_of(cell, items)
 
 
 def confidence(level, feeds, site, expected_event):
@@ -101,7 +90,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
     for s in sigs:
         if s["kind"] not in PRESENCE_ONLY:
             cells[s["cell"]].append(s)
-    expected, history = baseline.expectations(con, hours)
+    expected, history = baseline.expectations(con, hours, median=rules.FLAGS["median_baseline"])
     hot_cc = hot_countries(con)
     texts = defaultdict(list)
     for c, its in cells.items():
@@ -109,36 +98,9 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             texts[c].append((s["source"], f"{s.get('title') or ''} {s.get('url') or ''}"))
     out = []
     for cell, items in cells.items():
-        by_src = defaultdict(float)
-        for s in items:
-            by_src[s["source"]] += s["score"] or 1
-        feeds = {}
-        for src, obs in by_src.items():
-            exp = expected.get((cell, src), 0.0)
-            z, ratio, elevated = baseline.judge(obs, exp, src, history.get(src, 0))
-            feeds[src] = {"observed": round(obs, 1), "expected": round(exp, 2), "z": round(z, 1),
-                          "ratio": round(ratio, 1) if ratio else None, "elevated": elevated,
-                          "baseline": history.get(src, 0) >= baseline.MIN_HISTORY_HOURS}
-        site_by = {}
-        for s in items:
-            site = json.loads(s["extra"] or "{}").get("site") if isinstance(s["extra"], str) else (s["extra"] or {}).get("site")
-            if site and s["source"] not in site_by:
-                site_by[s["source"]] = site
         nearby = [x for n in rules.neighbours(cell) for x in texts.get(n, ())]
-        level, reason, site = rules.decide(feeds, cell, expected, site_by, hot_cc, nearby)
-        hot = [s for s, f in feeds.items() if f["elevated"]]   # after decide: the site rule can lift a feed
-        expected_event = None
-        if level in ("signal", "reported"):
-            active = [s for s, f in feeds.items() if rules.above_normal(f)] or hot
-            # The note only applies when the feed driving the hotspot is one the event explains:
-            # bonfire season explains fires, not a Google Cloud outage in London.
-            lead = max(hot or active, key=lambda s: feeds[s].get("z", 0))
-            expected_event = known_events.match(time.time(), _country_of(cell, items), [lead])
-            if expected_event:
-                unexplained = [s for s in active if s not in expected_event["feeds"]]
-                if level == "reported" and not unexplained:
-                    level = "signal"   # held until a feed the event doesn't explain backs it up
-                reason = f"{reason} · expected: {expected_event['name']}"
+        ev = rules.evaluate(cell, items, expected, history, hot_cc, nearby)
+        level, reason, site, feeds, hot, expected_event = ev["level"], ev["reason"], ev["site"], ev["feeds"], ev["hot"], ev["expected_event"]
         if debug is not None:
             debug.append({"cell": cell, "feeds": feeds, "lat": items[0]["lat"], "lon": items[0]["lon"], "decision": level, "reason": reason,
                           "place": next((s["place"] for s in items if s.get("place")), None)})
@@ -229,7 +191,7 @@ class Handler(SimpleHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
             if u.path == "/api/hotspots":
-                return self._json({"now": int(time.time()), "hotspots": hotspots(self.con, int(q.get("hours", 6)), watch=bool(q.get("watch")))})
+                return self._json({"now": int(time.time()), "hotspots": hotspots(self.con, int(q.get("hours", 6)), min(int(q.get("limit", 40)), 200), watch=bool(q.get("watch")))})
             if u.path == "/api/situations":   # all=1 for the full country table (tuning)
                 res = dict(_situations(self.con))
                 if not q.get("all"):
@@ -275,6 +237,16 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json({"ok": True, "message": "Ricochet stopping"})
                 threading.Timer(0.5, lambda: os._exit(0)).start()
                 return
+            if u.path == "/api/benchmark":   # rule-change scoreboard (tracker/benchmark.py)
+                from . import benchmark
+                try:
+                    with open(benchmark.RESULT, encoding="utf-8") as f:
+                        res = json.load(f)
+                except OSError:
+                    return self._json({"ok": False, "message": "No benchmark run yet"})
+                if not q.get("detail"):
+                    res.pop("detail", None)
+                return self._json(res)
             if u.path == "/api/health":
                 return self._json({"now": int(time.time()), "sources": health(self.con), "baseline": baseline.status(self.con)})
         except Exception as e:

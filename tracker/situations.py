@@ -29,8 +29,8 @@ ESCALATE_VS_WORLD = 1.5
 ESCALATE_MIN_CONFLICT = 40
 
 
-def compute(con, days=7):
-    today = int(time.time()) // 86400
+def compute(con, days=7, now=None):
+    today = int(now or time.time()) // 86400
     first = today - days + 1
     rows = con.execute("SELECT country, day, total, conflict FROM country_day WHERE day >= ?", (first,)).fetchall()
     if not rows:

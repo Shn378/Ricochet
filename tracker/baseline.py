@@ -142,26 +142,47 @@ def status(con):
     return out
 
 
-def expectations(con, window_hours):
+def expectations(con, window_hours, now=None, cells=None, median=False):
     """Expected score per (cell, source) for the recent window, taken from the SAME
     hours of the day on previous days. Fire satellites pass at fixed times and news
     follows a daily cycle, so a 24-hour average would make every afternoon look
-    abnormal. Returns ({(cell, source): expected}, {source: history_hours})."""
-    now_hour = int(time.time()) // 3600
+    abnormal. Returns ({(cell, source): expected}, {source: history_hours}).
+
+    now: judge as at this time (replays and the benchmark); cells: only these squares
+    (plus neighbours for fires); median: the typical day over the 4 weeks kept, so one
+    terrible week doesn't raise the bar for a month."""
+    now_hour = int(now or time.time()) // 3600
     end = now_hour - window_hours + 1          # first hour of the recent window
     hist, days = {}, {}
     for s in ("gdelt", "ioda", "firms", "wiki", "adsb", "news"):
         hist[s] = history_hours(con, s, end)
         days[s] = hist[s] // 24
+    want = None
+    if cells is not None:
+        want = set()
+        for c in cells:
+            la, lo = map(int, c.split(":"))
+            want.update(f"{la + a}:{lo + b}" for a in (-1, 0, 1) for b in (-1, 0, 1))
+    if want and len(want) > 3000:   # SQLite caps the number of parameters: just read everything
+        want = None
+    cell_sql = f" AND cell IN ({','.join('?' * len(want))})" if want else ""
     exp = defaultdict(float)
-    q = """SELECT cell, source, SUM(score) AS total FROM buckets
+    q = f"""SELECT cell, (? - hour) / 24 AS d, SUM(score) AS total FROM buckets
            WHERE hour < ? AND hour >= ? - 24 * ? AND ((? - hour) % 24) < ?
-             AND source = ? GROUP BY cell"""
+             AND source = ?{cell_sql} GROUP BY cell, d"""
     for s, d in days.items():
         if hist[s] < MIN_HISTORY_HOURS or d < 1:
             continue
-        for r in con.execute(q, (end, now_hour, d, now_hour, window_hours, s)):
-            exp[(r["cell"], s)] = r["total"] / d
+        per_cell = defaultdict(list)
+        for r in con.execute(q, (now_hour, end, now_hour, d, now_hour, window_hours, s, *(sorted(want) if want else ()))):
+            per_cell[r["cell"]].append(r["total"])
+        for c, totals in per_cell.items():
+            if median:
+                vals = sorted(totals + [0.0] * max(0, d - len(totals)))
+                m = len(vals) // 2
+                exp[(c, s)] = vals[m] if len(vals) % 2 else (vals[m - 1] + vals[m]) / 2
+            else:
+                exp[(c, s)] = sum(totals) / d
     # Fires: a square inside a burning region inherits the region's normal level
     for s in NEIGHBOUR_SOURCES:
         own = {c: v for (c, src), v in exp.items() if src == s}
