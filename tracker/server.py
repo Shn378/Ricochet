@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlparse
 from . import baseline, db, known_events, rules, situations
 
 WEB = os.path.join(db.ROOT, "web")
-SOURCES = ["news", "gdelt", "ioda", "radar", "infra", "wiki", "firms", "adsb", "ais", "seismic"]
+SOURCES = ["news", "gdelt", "ioda", "radar", "infra", "wiki", "firms", "adsb", "ais", "seismic", "hazard"]
 PRESENCE_ONLY = db.CONTEXT_KINDS   # context layer, never makes a hotspot
 
 
@@ -243,6 +243,13 @@ class Handler(SimpleHTTPRequestHandler):
                 if not q.get("detail"):
                     res.pop("detail", None)
                 return self._json(res)
+            if u.path == "/api/audit":   # deterministic audit: feed and collector health (tracker/audit.py)
+                from . import audit
+                try:
+                    with open(audit.RESULT, encoding="utf-8") as f:
+                        return self._json(json.load(f))
+                except OSError:
+                    return self._json({"ok": False, "message": "No audit run yet"})
             if u.path == "/api/health":
                 return self._json({"now": int(time.time()), "sources": health(self.con), "baseline": baseline.status(self.con)})
         except Exception as e:

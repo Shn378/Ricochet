@@ -83,7 +83,10 @@ class Budget:
                                     ON CONFLICT(url) DO UPDATE SET name=excluded.name, country=excluded.country, layer=excluded.layer""",
                                  (fd["url"], fd["name"], fd.get("country"), layer, now))
             # Feeds taken out of backbone.json are retired, not deleted, so their history stays
-            urls = [fd["url"] for fd in feeds]
+            # ...and so are feeds the daily audit retired for refusing us (403/429) for 3+ days
+            from .audit import load_retired
+            gone = load_retired()
+            urls = [fd["url"] for fd in feeds if fd["url"] not in gone] or ["-"]
             self.con.execute(f"UPDATE sources SET status='retired' WHERE layer IN (2, 5) AND url NOT IN ({','.join('?' * len(urls))})", urls)
             self.con.execute(f"UPDATE sources SET status='active', fails=0 WHERE layer IN (2, 5) AND status='retired' AND url IN ({','.join('?' * len(urls))})", urls)
             self.con.commit()

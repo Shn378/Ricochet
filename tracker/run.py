@@ -174,6 +174,8 @@ def main():
     threading.Thread(target=housekeeping, args=(con, cfg.getint("general", "keep_days")), daemon=True).start()
     from . import benchmark
     threading.Thread(target=benchmark.runner, args=(log,), daemon=True, name="benchmark").start()
+    from . import audit
+    threading.Thread(target=audit.runner, args=(log,), daemon=True, name="audit").start()
     from . import archive, server as srv
     threading.Thread(target=archive.runner, args=(cfg, lambda c: srv.hotspots(c, 6, 200, watch=True), log),
                      daemon=True, name="archive").start()
