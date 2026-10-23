@@ -1,5 +1,38 @@
 # Ricochet backlog and decisions
 
+## Weekend progress (23-24 Oct) — read this first in a new session
+
+Done 23 Oct (Fri night):
+- VM moved to the free tier: `ricochet-us` (us-central1-a). Old `ricochet` (London) to be
+  stopped and kept a week as a fallback. Check the bill in a week for the external IP charge.
+- CLAUDE.md slimmed (backlog moved here); GEMINI.md written (Gemini's rules: never push main).
+- Engine pass: `rules.evaluate()` is the one decision path (live, replay, benchmark). Replay now
+  uses known events and ongoing countries. Laptop leftovers, /api/shutdown and .bat files removed.
+- Benchmark harness (`tracker/benchmark.py`, `docs/benchmark.json` = 26 incidents). Proposed rules
+  are switches in `rules.FLAGS`, all off: pair_signal, national_no_open, quake_strict, severity,
+  listed_conflicts, median_baseline. Runs ~10 min after each deploy and daily; `/api/benchmark`.
+- Snapshots: raw replies kept only when they bring new signals; FIRMS archive trimmed to 6 h.
+- R2 archive (`tracker/archive.py`): daily digest + hourly hotspot log + frozen benchmark files,
+  first upload after 01:00 UTC 24 Oct. SigV4 verified against AWS examples, not yet against R2.
+
+Next, in order:
+1. Check `/api/health` (all feeds back after the move) and `/api/benchmark`. If the benchmark
+   errors, ask Shane for `journalctl -u ricochet --since -1h | grep -i bench`.
+2. Read the benchmark: switch on (FLAGS default True) any flag with hits gained and zero extra
+   openings; take trade-offs to Shane with the extra-opening examples. Sanity-check the extra
+   openings by eye; the noise pass treats every new opening as a possible false alarm.
+3. Check the first R2 upload in the log (`grep archive`).
+4. BigQuery read-only key (walk Shane through the console: service account with BigQuery Job User
+   + Data Viewer, JSON key into config.ini on the VM) for older GDELT replays and baselines.
+5. Gemini morning audit: write its prompt (based on docs/morning-audit.md) writing to a Google Doc
+   in a "Ricochet audits" Drive folder that Claude reads via the Drive connector.
+6. Deterministic half of the audit as `audit.py` on the VM (feed health, auto-retire 3-day 403s).
+7. Quick-win sources: GDACS, NOAA tsunami, GOV.UK alerts, threat levels, Met Office context.
+8. UI build (three modes, docs/ui) — biggest chunk; may slip to next weekend.
+Also pending: add the 23 Oct audit's incidents to docs/benchmark.json (Shane to paste the report);
+Arab News + LBCI on probation once the audit gives confirmed feed URLs; uptime alert in Cloud
+Monitoring; site-name placement for stories (Shaybah miss) is not built yet.
+
 Moved out of CLAUDE.md on 23 Oct to keep every session's context small. Read when planning work.
 
 ## Open items

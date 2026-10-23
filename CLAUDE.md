@@ -34,7 +34,7 @@ budget around a gym membership (suggested hard cap £2/day). Keep costs visible.
 | Thing | Where |
 |---|---|
 | Code | GitHub `Shn378/Ricochet` (private). `main` deploys automatically. |
-| Server | Google Cloud VM `ricochet`, e2-micro, europe-west2 (London), Debian. About £6-9/month. |
+| Server | Google Cloud VM `ricochet-us`, e2-micro, us-central1-a (free tier), Debian 13, user shaneellis19, repo at ~/ricochet. Moved 23 Oct from `ricochet` (europe-west2-c, now stopped as a fallback; delete after ~30 Oct). |
 | Public site | Cloudflare Tunnel → `ricochet.watch` (domain on Cloudflare, ~$34/yr) |
 | Secrets | `~/ricochet/config.ini` on the VM only (FIRMS map key, Cloudflare Radar token, aisstream key, R2 bucket key). Never in git, never repeated in chat. |
 | Project brief | Claude Docs: "Ricochet — Project Brief" (concept, sourcing, lifecycle, evidence standards, positioning, replay log) |
