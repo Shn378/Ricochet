@@ -86,7 +86,8 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   z = (obs−exp)/sqrt(exp+1); elevated = z≥3 and ratio≥2 (FIRMS 4). Fixed rules when no baseline.
 - `tracker/rules.py`: `evaluate()` is the one decision path for the live globe, replay and the
   benchmark (feeds vs normal, `decide()`, expected-event hold). `FLAGS` switch proposed rule changes
-  on/off (pair_signal, national_no_open, quake_strict, severity, listed_conflicts, median_baseline).
+  on/off (pair_signal, national_no_open, quake_strict, severity, listed_conflicts, median_baseline);
+  quake_strict and severity are live (24 Oct), the rest off.
   `decide()`: Reported = two feeds *above their
   own normal* (`above_normal`), one well above. Fires alone count only near an
   ongoing/escalating country, and a lone seismic event only near one, at a site, or if it
@@ -101,6 +102,10 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   `data/benchmark/`) plus the last 3 days of live traffic under each `FLAGS` variant. Runs on the
   server after each deploy and daily; results at `/api/benchmark` (`?detail=1` per incident).
   A flag goes live (default True) only when it gains hits with no extra openings, else Shane decides.
+- `tracker/audit.py`: daily 04:xx UTC feed/collector health at `/api/audit`; auto-retires feeds refusing
+  us (403/429) for 3+ days via `data/auto_retired.json` and lists them under `for_claude` to drop from backbone.json.
+- `tracker/threat_levels.json`: hand-kept national threat levels on country cards (audit re-checks daily).
+- `web/v2.html`: new UI (docs/ui) at `?ui=new`: phone default, `&mode=wall`, `&mode=stream`. Not yet the default.
 - `tracker/conflicts.py`: hand-kept list of armed conflicts (optionally boxed), for `listed_conflicts`.
 - `tracker/places.py` + `gazetteer.json.gz`: placing stories (GeoNames ≥15k, demonyms, leaders).
 

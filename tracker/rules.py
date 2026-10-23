@@ -13,8 +13,8 @@ from . import baseline, known_events
 FLAGS = {
     "pair_signal": False,       # two feeds each moderately above normal open a Signal together
     "national_no_open": False,  # GDELT reports pinned to a country's centre point don't count
-    "quake_strict": False,      # the "5+ might be a nuclear test" exception needs one big event, not a swarm
-    "severity": False,          # a report of 10+ killed counts whatever the baseline
+    "quake_strict": True,       # live 24 Oct (Shane): 0 hits lost, 3 fewer openings. The "5+ might be a nuclear test" exception needs one big event, not a swarm
+    "severity": True,           # live 24 Oct (Shane): +2 hits, +21 openings. A report of 10+ killed counts whatever the baseline
     "listed_conflicts": False,  # hand-kept list of wars (conflicts.py) counts as "in conflict"
     "median_baseline": False,   # normal level = median day over 4 weeks, not the average
 }

@@ -15,12 +15,13 @@ def feed(obs, exp=0.0, z=None, elevated=False, has_baseline=True, **kw):
 
 
 class FlagRules(unittest.TestCase):
-    def test_flags_default_off(self):
-        self.assertFalse(any(rules.FLAGS.values()))
+    def test_flags_live_set(self):
+        # Switched on 24 Oct with Shane's approval; the rest stay off until benchmarked and approved
+        self.assertEqual({k for k, v in rules.FLAGS.items() if v}, {"quake_strict", "severity"})
 
     def test_pair_signal(self):
         f = {"gdelt": feed(3.5, 1.0), "news": feed(3.5, 1.0)}
-        self.assertIsNone(rules.decide(dict(f), "26:49", {}, flags=rules.FLAGS)[0])
+        self.assertIsNone(rules.decide(dict(f), "26:49", {}, flags=dict(rules.FLAGS, pair_signal=False))[0])
         lvl, why, _ = rules.decide({k: dict(v) for k, v in f.items()}, "26:49", {}, flags=dict(rules.FLAGS, pair_signal=True))
         self.assertEqual(lvl, "signal")
         self.assertIn("together", why)
@@ -30,7 +31,7 @@ class FlagRules(unittest.TestCase):
 
     def test_quake_swarm_is_not_a_test(self):
         swarm = {"seismic": feed(6.0, has_baseline=False, elevated=True, n=4, max=1.8)}
-        self.assertEqual(rules.decide({k: dict(v) for k, v in swarm.items()}, "63:-24", {}, hot_countries=set())[0], "signal")
+        self.assertEqual(rules.decide({k: dict(v) for k, v in swarm.items()}, "63:-24", {}, hot_countries=set(), flags=dict(rules.FLAGS, quake_strict=False))[0], "signal")
         self.assertIsNone(rules.decide(swarm, "63:-24", {}, hot_countries=set(), flags=dict(rules.FLAGS, quake_strict=True))[0])
         single = {"seismic": feed(5.5, has_baseline=False, elevated=True, n=1, max=5.5)}
         self.assertEqual(rules.decide(single, "41:129", {}, hot_countries=set(), flags=dict(rules.FLAGS, quake_strict=True))[0], "signal")
@@ -50,7 +51,7 @@ class FlagRules(unittest.TestCase):
         exp = {("14:46", "gdelt"): 4.0}
         items = [{"source": "gdelt", "kind": "conflict_report", "score": 2.0, "title": "x",
                   "url": "https://e.com/houthi-strike-on-army-camp-kills-73-soldiers", "extra": "{}"}]
-        self.assertIsNone(rules.evaluate("14:46", items, exp, hist)["level"])
+        self.assertIsNone(rules.evaluate("14:46", items, exp, hist, flags={"severity": False})["level"])
         ev = rules.evaluate("14:46", items, exp, hist, flags={"severity": True})
         self.assertEqual(ev["level"], "signal")
         self.assertIn("73 killed", ev["reason"])

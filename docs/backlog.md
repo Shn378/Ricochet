@@ -25,7 +25,14 @@ Done 24 Oct (00:00-01:00):
   median_baseline +2 (riyadh-20, tendelti-20) / +85 (US local crime, base range fires);
   quake_strict 0 hits / 3 fewer openings; national_no_open no effect at all.
 - Benchmark sped up ~14x (shared per-hour work, one baseline pass, low CPU priority); identical results.
-- severity: death-toll regex no longer reads injury tolls or URL ids as deaths.
+- severity: death-toll regex no longer reads injury tolls or URL ids as deaths (rerun: +2 hits, +21 openings).
+- **Live from 24 Oct (Shane approved): quake_strict and severity.** Watch in the audit: severity can borrow a
+  toll from another story in the same square (Toronto/India national-centre cells) and one mis-placed GDELT
+  story can open several squares (one Chinese "16 killed" story in 3 places).
+- Benchmark speed-up barely showed on the server (2370 s -> 2274 s): the bottleneck is elsewhere. Profile
+  with Shane's help: `cd ~/ricochet && python3 -m cProfile -s cumtime -m tracker.benchmark 2>&1 | head -40`.
+- audit.py + /api/audit (auto-retires feeds refusing us 3+ days); threat levels on cards (UK, NL, FR);
+  Met Office warnings as hazard context; new UI at ?ui=new (phone / &mode=wall / &mode=stream).
 - New `hazards` collector (GDACS red/orange, NOAA PTWC/NTWC): context only until Shane decides
   whether GDACS red / tsunami warnings can open a hotspot. GOV.UK alerts parked: needs alert-area shapes.
 
