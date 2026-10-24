@@ -46,7 +46,13 @@ def log(msg):
     line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} {msg}"
     print(line, flush=True)
     os.makedirs(db.DATA, exist_ok=True)
-    with open(os.path.join(db.DATA, "tracker.log"), "a", encoding="utf-8") as f:
+    path = os.path.join(db.DATA, "tracker.log")
+    try:   # keep it to two 20 MB files rather than filling the disk (systemd's journal has the full story)
+        if os.path.getsize(path) > 20_000_000:
+            os.replace(path, path + ".1")
+    except OSError:
+        pass
+    with open(path, "a", encoding="utf-8") as f:
         f.write(line + "\n")
 
 

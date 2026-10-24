@@ -55,6 +55,10 @@ def hotspots(con, hours=6, limit=40, watch=False):
 
 
 MAX_HOTSPOTS = 240
+MAX_HOURS = 168
+# Seconds a polled API answer is shared between visitors. /api/near is a full uncached pass.
+SHARED_CACHE = {"/api/health": 20, "/api/signals": 20, "/api/situations": 20, "/api/sources": 30, "/api/near": 60}
+_responses = {}
 
 
 def warm(log=print):
@@ -122,7 +126,8 @@ def _hotspots(con, hours=6, limit=40, debug=None):
     for s in sigs:
         if s["kind"] not in PRESENCE_ONLY:
             cells[s["cell"]].append(s)
-    expected, history = baseline.expectations(con, hours, median=rules.FLAGS["median_baseline"])
+    # Only the squares with signals (and their surroundings): reading every bucket for 4 weeks was the slow part
+    expected, history = baseline.expectations(con, hours, cells=list(cells), median=rules.FLAGS["median_baseline"])
     hot_cc = hot_countries(con)
     texts = defaultdict(list)
     for c, its in cells.items():
@@ -213,6 +218,13 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _json(self, obj):
         body = json.dumps(obj).encode()
+        if getattr(self, "_key", None):
+            if len(_responses) > 500:   # odd query strings can't grow it without limit
+                _responses.clear()
+            _responses[self._key] = (time.time(), body)
+        self._send(body)
+
+    def _send(self, body):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")
@@ -222,7 +234,16 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         u = urlparse(self.path)
-        q = {k: v[0] for k, v in parse_qs(u.query).items()}
+        q = {k: v[0] for k, v in parse_qs(u.query).items() if k != "v"}   # ?v= is only a cache-buster
+        if "hours" in q:   # a week at most: longer windows are slow scans on the e2-micro
+            q["hours"] = str(max(1, min(int(q["hours"]) if q["hours"].isdigit() else 6, MAX_HOURS)))
+        self._key = None
+        if u.path in SHARED_CACHE:
+            # Every open page polls these: answer from one copy for a few seconds, not one query per visitor
+            self._key = (u.path, tuple(sorted(q.items())))
+            hit = _responses.get(self._key)
+            if hit and time.time() - hit[0] < SHARED_CACHE[u.path]:
+                return self._send(hit[1])
         try:
             if u.path == "/api/hotspots":
                 return self._json({"now": int(time.time()), "hotspots": hotspots(self.con, int(q.get("hours", 6)), min(int(q.get("limit", 40)), 200), watch=bool(q.get("watch")))})

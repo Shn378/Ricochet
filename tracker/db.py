@@ -84,6 +84,7 @@ def connect():
     con = sqlite3.connect(DB_PATH, timeout=30, check_same_thread=False)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA synchronous=NORMAL")   # safe with WAL, and far fewer disk syncs on the small VM
     con.executescript(SCHEMA)
     return con
 
@@ -101,6 +102,8 @@ def migrate_v2(con):
 
 def rescore_ioda(con):
     """One-off fix for outage scores stored before the scale change."""
+    if get_meta(con, "rescored_ioda"):   # it used to rewrite every outage on each restart (every deploy)
+        return
     from .collectors.ioda import outage_score
     with _lock:
         rows = con.execute("SELECT id, extra FROM signals WHERE source='ioda'").fetchall()
@@ -108,6 +111,7 @@ def rescore_ioda(con):
             s = json.loads(r["extra"] or "{}").get("ioda_score")
             con.execute("UPDATE signals SET score=? WHERE id=?", (outage_score(s), r["id"]))
         con.commit()
+    set_meta(con, "rescored_ioda", int(time.time()))
 
 
 def get_meta(con, key, default=None):

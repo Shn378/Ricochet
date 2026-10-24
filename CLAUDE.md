@@ -95,7 +95,8 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   burst only counts as at a site if the article is about the site. A lone base fire outside
   conflict is held as **watch** until a nearby report names the site and an incident.
 - `tracker/known_events.py`: calendar of expected events; the note follows the hotspot's lead feed.
-- `tracker/server.py`: hotspots (confidence 0-100 orders the tour), API.
+- `tracker/server.py`: hotspots (confidence 0-100 orders the tour), API. Polled endpoints (health, signals, situations,
+  sources, near) share one answer between visitors for 20-60 s (`SHARED_CACHE`); `hours=` is capped at 168; `?v=` is ignored.
 - `tracker/situations.py`: country-level Ongoing/Escalating from GDELT conflict share.
 - `tracker/replay.py`: rebuilds a past incident's signals and simulates the live rules (GDELT via BigQuery when
   set up, else GDELT's 15-minute files).

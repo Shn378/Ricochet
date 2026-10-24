@@ -187,10 +187,11 @@ def expectations_both(con, window_hours, now=None, cells=None):
         days[s] = hist[s] // 24
     want = None
     if cells is not None:
+        # Two squares round each one: fires inherit from the 3x3, and conflict_zone() looks 2 out
         want = set()
         for c in cells:
             la, lo = map(int, c.split(":"))
-            want.update(f"{la + a}:{lo + b}" for a in (-1, 0, 1) for b in (-1, 0, 1))
+            want.update(f"{la + a}:{lo + b}" for a in range(-2, 3) for b in range(-2, 3))
     if want and len(want) > MAX_CELLS:   # past SQLite's parameter limit: read everything instead
         want = None
     out = {"mean": defaultdict(float), "median": defaultdict(float)}

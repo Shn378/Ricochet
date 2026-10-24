@@ -16,7 +16,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from . import db, places, situations
+from . import db, places
 from .collectors import news
 
 BACKBONE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backbone.json")
@@ -96,7 +96,8 @@ class Budget:
         """Countries that deserve fast checks: escalating/ongoing situations and open hotspots."""
         hot = set()
         try:
-            for c in situations.compute(self.con)["countries"]:
+            from .server import _situations   # the copy the warm-up thread keeps fresh
+            for c in _situations(self.con)["countries"]:
                 if c["ongoing"]:
                     iso = places.FIPS_TO_ISO.get(c["country"])
                     if iso:
