@@ -177,6 +177,7 @@ def main():
     from . import audit
     threading.Thread(target=audit.runner, args=(log,), daemon=True, name="audit").start()
     from . import archive, server as srv
+    threading.Thread(target=srv.warm, args=(log,), daemon=True, name="warm").start()
     threading.Thread(target=archive.runner, args=(cfg, lambda c: srv.hotspots(c, 6, 200, watch=True), log),
                      daemon=True, name="archive").start()
     port = cfg.getint("general", "port")

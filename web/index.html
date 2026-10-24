@@ -161,9 +161,11 @@ body[data-mode="phone"] .globe-wrap { height: min(100vw, 52vh); }
 .p-panel { padding: 4px 0 0; display: grid; gap: 14px; }
 
 /* ================= WALL ================= */
-body[data-mode="wall"] { height: 100vh; overflow: hidden; font-size: 16px; }
+body[data-mode="wall"], body[data-mode="stream"] { height: 100vh; overflow: hidden; }
+/* Wall and stream are laid out once at 1920x1080 and scaled to fit the screen (TV browsers report odd sizes) */
+.stage { position: fixed; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; font-size: 16px; }
 body[data-mode="wall"] .phone-only, body[data-mode="wall"] .stream-only { display: none !important; }
-.wall { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) minmax(0, 23vh) auto; gap: 14px; padding: 16px 24px 10px; }
+.wall { height: 1080px; display: grid; grid-template-rows: auto minmax(0, 1fr) 248px auto; gap: 14px; padding: 16px 24px 10px; }
 .w-top { display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
 .w-top .brand { font-size: 34px; }
 .w-top .tag { font: 14px var(--f-mono); color: var(--muted); }
@@ -172,6 +174,10 @@ body[data-mode="wall"] .phone-only, body[data-mode="wall"] .stream-only { displa
 .w-top .clock { font-size: 46px; font-weight: 500; }
 .w-mid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.7fr) minmax(0, 1.1fr); gap: 20px; min-height: 0; }
 .w-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden; }
+.w-col > * { flex: 0 0 auto; }
+#wSits { flex: 0 1 auto; overflow: hidden; }
+#cardW { flex: 1 1 auto; min-height: 380px; }
+#wNext { flex: 0 1 auto; overflow: hidden; }
 .w-globe { display: grid; grid-template-rows: minmax(0, 1fr) auto auto; gap: 8px; min-height: 0; }
 .w-globe .nav { justify-content: center; }
 .w-globe .prog { width: 70%; justify-self: center; }
@@ -186,16 +192,16 @@ body[data-mode="wall"] .key-btn { display: none; }
 body[data-mode="wall"] .hz-badge { display: none; }
 
 /* ================= STREAM ================= */
-body[data-mode="stream"] { height: 100vh; overflow: hidden; cursor: none; }
+body[data-mode="stream"] { cursor: none; }
 body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { display: none !important; }
-.stream { position: fixed; inset: 0; }
+.stream { position: absolute; inset: 0; }
 .stream .globe-wrap { position: absolute; top: 0; bottom: 64px; left: 28%; right: 0; }
-.s-bug { position: absolute; top: 48px; left: 5vw; display: flex; align-items: center; gap: 18px; z-index: 3; }
+.s-bug { position: absolute; top: 48px; left: 96px; display: flex; align-items: center; gap: 18px; z-index: 3; }
 .s-bug .brand { font-size: 34px; }
-.s-clock { position: absolute; top: 40px; right: 5vw; text-align: right; z-index: 3; }
+.s-clock { position: absolute; top: 40px; right: 96px; text-align: right; z-index: 3; }
 .s-clock .clock { font-size: 44px; font-weight: 500; }
 .s-clock small { display: block; font: 15px var(--f-mono); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
-.s-side { position: absolute; top: 19vh; left: 5vw; width: 25vw; display: grid; gap: 14px; z-index: 3; }
+.s-side { position: absolute; top: 205px; left: 96px; width: 480px; display: grid; gap: 14px; z-index: 3; }
 .s-side .label { margin-bottom: 2px; }
 .s-item { background: rgba(17,26,36,.92); border: 1px solid var(--line); border-left: 4px solid var(--c-signal); border-radius: 6px; padding: 14px 18px; }
 .s-item .label { color: var(--c-signal); }
@@ -203,7 +209,7 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
 .s-item span { font-size: 15px; color: var(--muted); }
 .s-item.ongoing { border-left-color: var(--c-ongoing); } .s-item.ongoing .label { color: var(--c-ongoing); }
 .s-item.hz { border: 1.5px solid var(--c-hazard); } .s-item.hz .label { color: var(--c-hazard); }
-.s-lt { position: absolute; left: 5vw; bottom: 104px; width: 58vw; z-index: 4; }
+.s-lt { position: absolute; left: 96px; bottom: 104px; width: 1114px; z-index: 4; }
 .s-lt .tagrow { display: flex; align-items: stretch; }
 .s-lt .tagrow > * { padding: 8px 16px; font: 500 15px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; background: rgba(11,17,24,.95); display: flex; align-items: center; gap: 8px; }
 .s-lt .tagrow .lvl { background: var(--c-reported); color: #111; }
@@ -217,15 +223,15 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
 .s-lt .sconf { border-left: 1px solid var(--line); padding-left: 24px; min-width: 210px; }
 .s-lt .sconf b { font: 700 46px var(--f-display); } .s-lt .sconf b small { font: 500 26px var(--f-display); color: var(--muted); margin-left: 6px; }
 .s-lt .prog { height: 3px; }
-.s-meta { position: absolute; right: 5vw; bottom: 104px; font: 15px var(--f-mono); color: var(--muted); z-index: 3; }
+.s-meta { position: absolute; right: 96px; bottom: 104px; font: 15px var(--f-mono); color: var(--muted); z-index: 3; }
 .ticker { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: rgba(11,17,24,.97); border-top: 1px solid var(--line); display: flex; align-items: center; z-index: 5; overflow: hidden; }
-.ticker > .label { flex: none; padding: 0 28px 0 5vw; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--line); font-size: 14px; color: var(--fg); }
+.ticker > .label { flex: none; padding: 0 28px 0 96px; height: 100%; display: flex; align-items: center; border-right: 1px solid var(--line); font-size: 14px; color: var(--fg); }
 .ticker .run { flex: 1; overflow: hidden; white-space: nowrap; }
 .ticker .run div { display: inline-block; padding-left: 100%; animation: tick 120s linear infinite; font-size: 21px; }
 .ticker .run span { margin-right: 46px; }
 .ticker .run time { font: 18px var(--f-mono); color: var(--muted); margin-right: 10px; }
 .ticker .run i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 10px; vertical-align: 2px; }
-.ticker .cred { flex: none; padding: 0 5vw 0 20px; font: 12px var(--f-mono); color: var(--muted); border-left: 1px solid var(--line); height: 100%; display: flex; align-items: center; }
+.ticker .cred { flex: none; padding: 0 96px 0 20px; font: 12px var(--f-mono); color: var(--muted); border-left: 1px solid var(--line); height: 100%; display: flex; align-items: center; }
 @keyframes tick { to { transform: translateX(-100%); } }
 @media (prefers-reduced-motion: reduce) { .live::before, svg.o .ping, .ticker .run div { animation: none; } }
 </style>
@@ -271,7 +277,7 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
 </div>
 
 <!-- ======== WALL ======== -->
-<div class="wall wall-only" id="wall">
+<div class="stage wall-only" id="stageWall"><div class="wall" id="wall">
   <header class="w-top"><span class="brand" id="brandW"></span><span class="tag">Powered by the Tripwire engine</span><span class="live">Live tripwires</span><span class="counts" id="wCounts"></span><span class="date" id="wDate"></span><span class="clock" data-clock></span></header>
   <div class="w-mid">
     <div class="w-col"><div class="label">Ongoing situations</div><div id="wSits" style="display:grid;gap:12px;min-height:0"></div><div id="wHaz"></div></div>
@@ -286,10 +292,10 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
     <div class="panel"><div class="label" style="display:flex;justify-content:space-between"><span>Feed health</span><span id="wHealthSum" style="text-transform:none;letter-spacing:.02em"></span></div><div class="chips" id="wFeeds"></div><p class="note" id="wFeedNote"></p></div>
   </div>
   <footer class="w-foot"><span class="credits" data-credits></span><span>ricochet.watch · nothing is shown as confirmed unless it is</span></footer>
-</div>
+</div></div>
 
 <!-- ======== STREAM ======== -->
-<div class="stream stream-only" id="stream">
+<div class="stage stream-only" id="stageStream"><div class="stream" id="stream">
   <div id="slotStream"></div>
   <div class="s-bug"><span class="brand" id="brandS"></span><span class="live">Live tripwires</span></div>
   <div class="s-clock"><span class="clock" data-clock></span><small id="sDate"></small></div>
@@ -297,7 +303,7 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
   <div class="s-lt" id="sLt"></div>
   <div class="s-meta" id="sMeta"></div>
   <div class="ticker"><span class="label">Latest signals</span><div class="run"><div id="sTick"></div></div><span class="cred">Data: GDELT · FIRMS · IODA · USGS · GDACS · adsb.fi +6 · ricochet.watch</span></div>
-</div>
+</div></div>
 
 <div class="intro" id="intro" hidden role="dialog" aria-labelledby="introTitle">
   <div class="intro-card">
@@ -344,7 +350,7 @@ $$('[data-credits]').forEach(e => e.innerHTML = CREDITS);
 $('keyFeeds').innerHTML = ['news', 'gdelt', 'ioda', 'wiki', 'firms', 'adsb', 'seismic', 'ais', 'infra', 'hazard'].map(s => `<span><i style="background:${SCOL(s)}"></i>${SRC[s]}</span>`).join('');
 
 /* ================= Data ================= */
-let hotspots = [], watching = [], situations = [], worldShare = null, signals = [], hazards = [], health = null;
+let listed = [], hotspots = [], watching = [], situations = [], worldShare = null, signals = [], hazards = [], health = null;
 let stops = [], focus = null, tourIdx = -1, cellSignals = [], phaseEnd = 0, dwellTotal = DWELL, manual = false, lastTouch = 0;
 async function getJSON(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
 
@@ -364,20 +370,26 @@ const shortName = h => nameOf(h).split(',')[0];
 const featureFor = c => c._f !== undefined ? c._f : (c._f = countryFeats.find(f => d3.geoContains(f, [c.lon, c.lat])) || null);
 const confWord = c => c >= 60 ? 'High' : c >= 30 ? 'Medium' : 'Low';
 const hzLevel = s => (s.extra && s.extra.alert) || '';
-const majorHazard = s => /gdacs_(red|orange)|tsunami_(warning|threat|advisory|watch)/.test(s.kind) || (s.kind === 'met_warning' && /red|amber/.test(hzLevel(s)));
+// GDACS red and tsunami warnings get the swirl; GDACS orange (droughts, slow floods) is a small dot
+const majorHazard = s => /gdacs_red|tsunami_(warning|threat|advisory|watch)/.test(s.kind) || (s.kind === 'met_warning' && /red|amber/.test(hzLevel(s)));
 
+function buildStops() {
+  stops = [...hotspots.slice(0, 12).map(x => Object.assign(x, { type: 'hotspot', key: x.cell })),
+           ...situations.slice(0, 6).map(x => Object.assign(x, { type: 'ongoing', key: 'c:' + x.country }))];
+  if (focus) { const i = stops.findIndex(x => x.key === focus.key); if (i >= 0) { tourIdx = i; focus = stops[i]; } }
+}
 async function refresh() {
-  try {
-    const [h, s, o, z] = await Promise.all([getJSON('/api/hotspots?hours=6&watch=1'), getJSON('/api/signals?hours=6'),
-      getJSON('/api/situations').catch(() => ({ countries: [] })), getJSON('/api/signals?hours=72&feed=hazard&limit=50').catch(() => ({ signals: [] }))]);
-    hotspots = h.hotspots.filter(x => x.level !== 'watch'); watching = h.hotspots.filter(x => x.level === 'watch');
-    signals = s.signals.filter(x => x.source !== 'hazard'); situations = o.countries || []; worldShare = o.world_share;
-    hazards = z.signals; loaded = true;
-    stops = [...hotspots.slice(0, 12).map(x => Object.assign(x, { type: 'hotspot', key: x.cell })),
-             ...situations.slice(0, 6).map(x => Object.assign(x, { type: 'ongoing', key: 'c:' + x.country }))];
-    if (focus) { const i = stops.findIndex(x => x.key === focus.key); if (i >= 0) { tourIdx = i; focus = stops[i]; } }
-    renderAll();
-  } catch (e) { console.warn('refresh', e); }
+  // Each part shows as soon as it arrives: hotspots first (the tour), then the rest
+  const parts = [
+    getJSON('/api/hotspots?hours=6&watch=1').then(h => {
+      hotspots = h.hotspots.filter(x => x.level !== 'watch'); watching = h.hotspots.filter(x => x.level === 'watch'); loaded = true;
+      if (!stops.length) phaseEnd = performance.now() + 300;   // start the tour straight away
+    }),
+    getJSON('/api/situations').then(o => { situations = o.countries || []; worldShare = o.world_share; listed = o.listed || []; }),
+    getJSON('/api/signals?hours=6&lite=1').then(s => { signals = s.signals.filter(x => x.source !== 'hazard'); }),
+    getJSON('/api/signals?hours=72&feed=hazard&limit=50').then(z => { hazards = z.signals; }),
+  ].map(p => p.then(() => { buildStops(); renderAll(); }).catch(e => console.warn('refresh', e)));
+  await Promise.all(parts);
 }
 async function refreshHealth() { try { health = await getJSON('/api/health'); renderHealth(); } catch (e) {} }
 async function loadCell() {
@@ -402,7 +414,7 @@ async function setFocus(h, dwell, stay) {
   await loadCell(); renderCard(); renderNext();
 }
 function renderControls() {
-  $$('[data-pos]').forEach(e => e.textContent = stops.length ? `${tourIdx + 1} / ${stops.length}` : '0 / 0');
+  $$('[data-pos]').forEach(e => e.textContent = stops.length ? `${Math.max(tourIdx, 0) + 1} / ${stops.length}` : loaded ? '0 / 0' : '…');
   $$('[data-pause]').forEach(e => { e.textContent = manual ? '▶ Resume tour' : '❚❚ Pause tour'; e.classList.toggle('paused', manual); });
 }
 $$('[data-move]').forEach(b => b.onclick = () => move(+b.dataset.move));
@@ -621,7 +633,7 @@ function renderHealth() {
 function renderHazardBadge() {
   const b = $('hzBadge'); const z = hazards.find(s => /gdacs_red|tsunami_(warning|threat)/.test(s.kind));
   if (MODE !== 'phone' || !z) { b.hidden = true; return; }
-  b.innerHTML = `${SWIRL}Natural hazard · ${esc((z.place || '').slice(0, 22))}`; b.hidden = false;
+  const pl = (z.place || '').split(',')[0]; b.innerHTML = `${SWIRL}Natural hazard · ${esc(pl.length > 18 ? pl.slice(0, 17) + '…' : pl)}`; b.hidden = false;
 }
 function renderAll() {
   renderControls(); renderCard(); renderNext();
@@ -635,9 +647,18 @@ const canvas = $('globe'), ctx = canvas.getContext('2d');
 const projection = d3.geoOrthographic().clipAngle(90).precision(.6), path = d3.geoPath(projection, ctx), graticule = d3.geoGraticule10();
 let land, borders, W, H, base, rot = [-20, -25], zoom = 1, tween = null;
 const PAL = {};
+let SCALE = 1;
+function fitStage() {
+  const st = document.querySelector(MODE === 'wall' ? '#stageWall' : MODE === 'stream' ? '#stageStream' : null);
+  if (!st) return;
+  SCALE = Math.min(innerWidth / 1920, innerHeight / 1080);
+  st.style.transform = `translate(${(innerWidth - 1920 * SCALE) / 2}px, ${(innerHeight - 1080 * SCALE) / 2}px) scale(${SCALE})`;
+}
 function resize() {
-  const r = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
-  W = r.width; H = r.height; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fitStage();
+  // layout size (unscaled), sharpened for the screen's real pixels
+  const dpr = Math.min((devicePixelRatio || 1) * SCALE, 2);
+  W = canvas.offsetWidth; H = canvas.offsetHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   base = Math.min(W, H) * (MODE === 'stream' ? .5 : .46); projection.translate([W / 2, H / 2]);
 }
 addEventListener('resize', resize);
@@ -721,7 +742,7 @@ addEventListener('keydown', e => {
 });
 if (MODE !== 'stream') {
   canvas.addEventListener('click', e => {
-    const r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, centre = [-rot[0], -rot[1]];
+    const r = canvas.getBoundingClientRect(), px = (e.clientX - r.left) / SCALE, py = (e.clientY - r.top) / SCALE, centre = [-rot[0], -rot[1]];
     let best = -1, bd = 28 * 28;
     stops.forEach((h, i) => { if (d3.geoDistance([h.lon, h.lat], centre) > Math.PI / 2 - .03) return; const [x, y] = projection([h.lon, h.lat]); const d = (x - px) ** 2 + (y - py) ** 2; if (d < bd) { bd = d; best = i; } });
     if (best >= 0) jump(best);
@@ -731,7 +752,7 @@ if (MODE !== 'stream') {
   canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, r: rot.slice() }; dragged = false; });
   canvas.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (!dragged && Math.hypot(dx, dy) < 6) return; if (!dragged) { dragged = true; pause(); tween = null; }
-    const k = 90 / (base * zoom); rot = [drag.r[0] + dx * k, Math.max(-80, Math.min(80, drag.r[1] - (e.pointerType === 'mouse' ? dy * k : 0)))]; });
+    const k = 90 / (base * zoom * SCALE); rot = [drag.r[0] + dx * k, Math.max(-80, Math.min(80, drag.r[1] - (e.pointerType === 'mouse' ? dy * k : 0)))]; });
   const end = () => { if (drag && dragged) lastTouch = performance.now(); drag = null; setTimeout(() => dragged = false, 0); };
   canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end); canvas.addEventListener('pointerleave', end);
 }

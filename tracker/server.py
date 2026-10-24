@@ -46,12 +46,30 @@ def threat_level(iso):
 def hotspots(con, hours=6, limit=40, watch=False):
     """Cached for a minute: the baseline maths is the heavy part on a small machine.
     "watch" items (lone fires at bases waiting for a second source) are left off the globe."""
-    key = (hours, limit)
+    key = ("hotspots", hours)
     hit = _cache.get(key)
     if not hit or time.time() - hit[0] >= 60:
-        hit = (time.time(), _hotspots(con, hours, limit + 40))
+        hit = (time.time(), _hotspots(con, hours, MAX_HOTSPOTS))   # one list for every caller, sliced
         _cache[key] = hit
     return [h for h in hit[1] if watch or h["level"] != "watch"][:limit]
+
+
+MAX_HOTSPOTS = 240
+
+
+def warm(log=print):
+    """Keep the globe's answers ready: work out hotspots and situations every 50 s in the
+    background, so a visitor never waits for the baseline maths (slow on the e2-micro)."""
+    con = db.connect()
+    while True:
+        try:
+            # compute, then swap in: visitors keep getting the previous answer meanwhile
+            if time.time() - _cache.get("situations", (0,))[0] > 240:
+                _cache["situations"] = (time.time(), situations.compute(con))
+            _cache[("hotspots", 6)] = (time.time(), _hotspots(con, 6, MAX_HOTSPOTS))
+        except Exception as e:
+            log(f"[warm] failed: {e}")
+        time.sleep(50)
 
 
 def _country_of(cell, items):
@@ -245,7 +263,11 @@ class Handler(SimpleHTTPRequestHandler):
                 elif q.get("country"):
                     data = rows(self.con, "SELECT * FROM signals WHERE country=? AND source='gdelt' AND observed_at>=? ORDER BY observed_at DESC LIMIT 200", (q["country"], since))
                 else:
-                    data = rows(self.con, "SELECT * FROM signals WHERE observed_at>=? AND lat IS NOT NULL ORDER BY observed_at DESC LIMIT 3000", (since,))
+                    if q.get("lite"):   # just what the globe draws: a much smaller download for phones
+                        data = rows(self.con, "SELECT source, kind, lat, lon, title, url, observed_at, '{}' AS extra FROM signals "
+                                              "WHERE observed_at>=? AND lat IS NOT NULL ORDER BY observed_at DESC LIMIT 3000", (since,))
+                    else:
+                        data = rows(self.con, "SELECT * FROM signals WHERE observed_at>=? AND lat IS NOT NULL ORDER BY observed_at DESC LIMIT 3000", (since,))
                 for d in data:
                     d["extra"] = json.loads(d["extra"] or "{}")
                 return self._json({"now": int(time.time()), "signals": data})
