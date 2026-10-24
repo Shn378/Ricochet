@@ -136,7 +136,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
     out = []
     for cell, items in cells.items():
         nearby = [x for n in rules.neighbours(cell) for x in texts.get(n, ())]
-        ev = rules.evaluate(cell, items, expected, history, hot_cc, nearby)
+        ev = rules.evaluate(cell, items, expected, history, hot_cc, nearby, window_hours=hours)
         level, reason, site, feeds, hot, expected_event = ev["level"], ev["reason"], ev["site"], ev["feeds"], ev["hot"], ev["expected_event"]
         if debug is not None:
             debug.append({"cell": cell, "feeds": feeds, "lat": items[0]["lat"], "lon": items[0]["lon"], "decision": level, "reason": reason,

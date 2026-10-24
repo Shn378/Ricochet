@@ -17,6 +17,7 @@ FLAGS = {
     "severity": True,           # live 24 Oct (Shane): +2 hits, +21 openings. A report of 10+ killed counts whatever the baseline
     "listed_conflicts": False,  # hand-kept list of wars (conflicts.py) counts as "in conflict"
     "median_baseline": False,   # normal level = median day over 4 weeks, not the average
+    "burst": False,             # also judge each feed on its last 2 hours, so a sudden burst trips before the 6-hour total catches up
     "na_admin_no_open": True,   # live 24 Oct (Shane, audit proposal 1): 16 fewer openings in 3 days, 0 hits lost. US/Canada GDELT reports placed only at a state/province or county can't open a hotspot alone
 }
 
@@ -247,7 +248,10 @@ def official_alert(s):
     return s.get("kind") in OFFICIAL_ALERT_KINDS and e.get("hazard") != "drought"
 
 
-def evaluate(cell, items, expected, history, hot_countries=None, nearby=None, now=None, flags=None):
+BURST_HOURS = 2
+
+
+def evaluate(cell, items, expected, history, hot_countries=None, nearby=None, now=None, flags=None, window_hours=6):
     """The whole hotspot decision for one square, shared by the live globe, replay and the
     benchmark. items: that square's signals in the window (context kinds already removed).
     Returns {"level", "reason", "feeds", "hot", "site", "expected_event"}."""
@@ -256,10 +260,10 @@ def evaluate(cell, items, expected, history, hot_countries=None, nearby=None, no
     if flags["na_admin_no_open"] and any(na_admin(s) for s in items):
         # They can back up a hotspot something else opened, never open one themselves
         inner = dict(flags, na_admin_no_open=False)
-        full = evaluate(cell, items, expected, history, hot_countries, nearby, now, inner)
+        full = evaluate(cell, items, expected, history, hot_countries, nearby, now, inner, window_hours)
         if full["level"] in ("signal", "reported"):
             rest = [s for s in items if not na_admin(s)]
-            alone = evaluate(cell, rest, expected, history, hot_countries, nearby, now, inner) if rest else None
+            alone = evaluate(cell, rest, expected, history, hot_countries, nearby, now, inner, window_hours) if rest else None
             if not alone or alone["level"] not in ("signal", "reported"):
                 return dict(full, level=None, reason="only US/Canada state- or county-level reports")
         return full
@@ -287,12 +291,21 @@ def evaluate(cell, items, expected, history, hot_countries=None, nearby=None, no
         if src in toll and not elevated:
             feeds[src]["elevated"] = True
             feeds[src]["severity"] = f"report of {toll[src]} killed"
+        if flags["burst"] and not feeds[src]["elevated"] and feeds[src]["baseline"] and window_hours > BURST_HOURS:
+            # The last 2 hours against 2 hours' share of the normal level (same thresholds)
+            obs2 = sum(s.get("score") or 1 for s in items if s["source"] == src and (s.get("observed_at") or s.get("t") or 0) > now - BURST_HOURS * 3600)
+            exp2 = exp * BURST_HOURS / window_hours
+            z2, ratio2, burst = baseline.judge(obs2, exp2, src, history.get(src, 0))
+            if burst:
+                feeds[src].update(elevated=True, z=round(max(z, z2), 1), burst=f"{round(obs2, 1)} in the last {BURST_HOURS} h vs {round(exp2, 2)} normal")
     site_by = {}
     for s in items:
         site = _extra(s).get("site")
         if site and s["source"] not in site_by:
             site_by[s["source"]] = site
     level, reason, site = decide(feeds, cell, expected, site_by, hot_countries, nearby, flags) if feeds else (None, None, None)
+    if level and any(f.get("burst") for f in feeds.values()):
+        reason = f"{reason} (burst in the last {BURST_HOURS} h)"
     hot = [s for s, f in feeds.items() if f["elevated"]]   # after decide: the site rule can lift a feed
     expected_event = None
     if level in ("signal", "reported"):

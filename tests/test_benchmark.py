@@ -150,3 +150,21 @@ class Store(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BurstRule(unittest.TestCase):
+    def test_burst_trips_before_the_six_hour_total(self):
+        now = 1_800_000_000
+        hist = {"gdelt": 200}
+        exp = {("33:44", "gdelt"): 6.0}          # normal: 1 an hour
+        # 8 reports, all in the last 90 minutes: the 6-hour total (8 vs 6) is ordinary, the burst isn't
+        items = [{"source": "gdelt", "kind": "conflict_report", "score": 1.0, "title": "x", "url": "", "extra": "{}",
+                  "observed_at": now - 60 * i} for i in range(1, 90, 11)]
+        off = rules.evaluate("33:44", items, exp, hist, set(), now=now, flags={"burst": False})
+        on = rules.evaluate("33:44", items, exp, hist, set(), now=now, flags={"burst": True})
+        self.assertIsNone(off["level"])
+        self.assertEqual(on["level"], "signal")
+        self.assertIn("burst in the last 2 h", on["reason"])
+        # The same 8 spread evenly over 6 hours stay quiet
+        spread = [dict(s, observed_at=now - 2700 * i) for i, s in enumerate(items, 1)]
+        self.assertIsNone(rules.evaluate("33:44", spread, exp, hist, set(), now=now, flags={"burst": True})["level"])
