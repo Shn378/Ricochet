@@ -75,8 +75,10 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
     military counts, and 10 flashpoint regions for airspace emptying + GPS jamming)
   - `ais` (aisstream.io WebSocket: ships per 15 min at 10 chokepoints)
   - `infra` (Google Cloud, Cloudflare, GitHub, Azure, AWS status pages)
-  - `hazards` (GDACS red/orange + NOAA tsunami centres; source `hazard`, all context kinds:
-    shown in lime, never counted. GOV.UK alerts parser written but not polled: placement not good enough)
+  - `hazards` (GDACS red/orange + NOAA tsunami centres + Met Office; source `hazard`, context kinds, shown in lime.
+    Official red alerts (GDACS red except droughts, tsunami warning/threat, Met Office red) open their own
+    `hazard`-level hotspot for 24 h via `rules.official_alert()` (Shane, 24 Oct), outside `evaluate()` and the benchmark.
+    GOV.UK alerts parser written but not polled: placement not good enough)
   - `news` (RSS/Atom via the attention budget)
 - `tracker/attention.py`: news "attention budget": 30 checks/min shared by heat.
   Backbone in `tracker/backbone.json` (50 feeds incl. Arab News, LBCI, Ukrainska Pravda (UA) and Kyiv Independent on probation from 24 Oct; Al Arabiya EN retired 22 Oct after 403s on probation). Layer 2 backbone, 3 leased (not built),
@@ -87,7 +89,7 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
 - `tracker/rules.py`: `evaluate()` is the one decision path for the live globe, replay and the
   benchmark (feeds vs normal, `decide()`, expected-event hold). `FLAGS` switch proposed rule changes
   on/off (pair_signal, national_no_open, quake_strict, severity, listed_conflicts, median_baseline,
-  na_admin_no_open); quake_strict, severity and na_admin_no_open are live (24 Oct), the rest off.
+  na_admin_no_open); quake_strict, severity, na_admin_no_open and national_no_open are live (24 Oct), the rest off.
   `decide()`: Reported = two feeds *above their
   own normal* (`above_normal`), one well above. Fires alone count only near an
   ongoing/escalating country, and a lone seismic event only near one, at a site, or if it

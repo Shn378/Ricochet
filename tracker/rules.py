@@ -12,7 +12,7 @@ from . import baseline, known_events
 # A switch flips to True once the benchmark shows hits gained with no extra false alarms.
 FLAGS = {
     "pair_signal": False,       # two feeds each moderately above normal open a Signal together
-    "national_no_open": False,  # GDELT reports pinned to a country's centre point don't count
+    "national_no_open": True,   # live 24 Oct (Shane): 0 hits lost, 3 fewer openings. GDELT reports pinned to a country's centre point don't count
     "quake_strict": True,       # live 24 Oct (Shane): 0 hits lost, 3 fewer openings. The "5+ might be a nuclear test" exception needs one big event, not a swarm
     "severity": True,           # live 24 Oct (Shane): +2 hits, +21 openings. A report of 10+ killed counts whatever the baseline
     "listed_conflicts": False,  # hand-kept list of wars (conflicts.py) counts as "in conflict"
@@ -230,6 +230,21 @@ def na_admin(s):
     if len(parts) == 2:                       # "Ohio, United States", "British Columbia, Canada"
         return True
     return len(parts) == 3 and bool(_COUNTY.search(parts[0]))
+
+
+# Official red alerts open a hotspot on their own (Shane, 24 Oct): their own "Natural hazard"
+# level in lime, never mixed with security. Not part of evaluate(): the benchmark is security incidents.
+# Droughts are left out: GDACS keeps them red for months, which would be a permanent hotspot.
+OFFICIAL_ALERT_KINDS = {"gdacs_red", "tsunami_warning", "tsunami_threat"}
+ALERT_HOURS = 24      # an alert stays on the tour for a day after its latest update
+
+
+def official_alert(s):
+    """Is this hazard signal an official red-level alert?"""
+    e = _extra(s)
+    if s.get("kind") == "met_warning":
+        return e.get("alert") == "red"
+    return s.get("kind") in OFFICIAL_ALERT_KINDS and e.get("hazard") != "drought"
 
 
 def evaluate(cell, items, expected, history, hot_countries=None, nearby=None, now=None, flags=None):

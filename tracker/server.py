@@ -166,8 +166,38 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             "first": items[0]["observed_at"],
             "last": items[-1]["observed_at"],
         })
+    out.extend(_alert_hotspots(con, {h["cell"] for h in out}))
     out.sort(key=lambda h: h["confidence"], reverse=True)
     return out[:limit]
+
+
+ALERT_CONFIDENCE = 60   # an official red alert: high on the tour, below a well-backed security incident
+
+
+def _alert_hotspots(con, taken):
+    """Official red alerts (GDACS red, tsunami warnings, Met Office red) as their own
+    "hazard" level. A square that already has a security hotspot keeps it."""
+    since = int(time.time()) - rules.ALERT_HOURS * 3600
+    by_cell = defaultdict(list)
+    for s in rows(con, "SELECT * FROM signals WHERE source='hazard' AND observed_at >= ? AND cell IS NOT NULL ORDER BY observed_at", (since,)):
+        if s["cell"] not in taken and rules.official_alert(s):
+            by_cell[s["cell"]].append(s)
+    out = []
+    for cell, items in by_cell.items():
+        last = items[-1]
+        credit = rules._extra(last).get("credit") or "official source"
+        out.append({
+            "cell": cell, "lat": last["lat"], "lon": last["lon"], "level": "hazard",
+            "sources": ["hazard"], "elevated": ["hazard"],
+            "feeds": {"hazard": {"observed": len(items), "n": len(items), "elevated": True, "baseline": False, "z": 0}},
+            "score": 0, "confidence": ALERT_CONFIDENCE, "count": len(items),
+            "place": last["place"], "headline": last["title"],
+            "reason": f"official red-level alert from {credit} (natural hazard, not a security incident)",
+            "expected": None, "site": None,
+            "country": last["country"] or rules.country_of(cell, items), "threat_level": None,   # a terror threat level says nothing about a storm
+            "first": items[0]["observed_at"], "last": last["observed_at"],
+        })
+    return out
 
 
 def health(con):

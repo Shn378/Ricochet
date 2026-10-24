@@ -78,6 +78,18 @@ Done 24 Oct (from the 24 Oct audit): Sahel Intelligence moved to /feed (no slash
 probation; 12 incidents from 23 Oct added to docs/benchmark.json (38 total). Still pending: uptime alert in Cloud
 Monitoring; site-name placement for stories (Shaybah miss) is not built yet.
 
+### Decided 24 Oct afternoon (Shane)
+
+- `national_no_open` live (0 hits lost, 3 fewer openings).
+- `pair_signal` (+1 hit / +14 openings), `listed_conflicts` (+1 / +74) and `median_baseline` (+0 / +84) stay off.
+  Shane: "incidents good, over-saturation of hotspots bad". **Later:** find a way to catch Mirage and Bryansk
+  without the extra openings (look at what the extra openings have in common and filter that, not the hit).
+- Official red alerts (GDACS red, tsunami warnings, Met Office red) open a hotspot on their own, as their own
+  lime "Natural hazard" level. Built 24 Oct; droughts excluded (red for months). GOV.UK alerts join once placed properly.
+- Cloudflare Web Analytics: yes (cookieless). Shane switches it on in the Cloudflare dashboard; the page and
+  terms say what's counted.
+- Claude may do anything else it judges should be done (Shane: "I approve"), within the CLAUDE.md principles.
+
 Moved out of CLAUDE.md on 23 Oct to keep every session's context small. Read when planning work.
 
 ## Open items

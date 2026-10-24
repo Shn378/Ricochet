@@ -52,6 +52,7 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; ani
 .pill.lvl-reported { color: var(--c-reported); border-color: var(--c-reported); background: rgba(233,180,76,.08); }
 .pill.lvl-signal { color: var(--c-signal); border-color: var(--c-signal); }
 .pill.lvl-watch { color: var(--muted); }
+.pill.lvl-hazard { color: var(--c-hazard); border-color: var(--c-hazard); }
 .pill.lvl-ongoing, .pill.lvl-escalating { color: var(--bg); background: var(--c-ongoing); border-color: var(--c-ongoing); }
 .pill.hz { color: var(--c-hazard); border-color: var(--c-hazard); }
 .pill.hz-red { color: #fff; background: #c8423b; border-color: #c8423b; }
@@ -214,6 +215,7 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
 .s-lt .tagrow > * { padding: 8px 16px; font: 500 15px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; background: rgba(11,17,24,.95); display: flex; align-items: center; gap: 8px; }
 .s-lt .tagrow .lvl { background: var(--c-reported); color: #111; }
 .s-lt .tagrow .lvl.signal { background: var(--c-signal); }
+.s-lt .tagrow .lvl.hazard { background: var(--c-hazard); }
 .s-lt .tagrow i { width: 8px; height: 8px; border-radius: 50%; }
 .s-lt .box { background: rgba(11,17,24,.95); padding: 18px 30px 20px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; }
 .s-lt h2 { font: 700 76px/1 var(--f-display); margin: 0; }
@@ -313,8 +315,9 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
     <ul>
       <li><b>Rings on the globe</b> are hotspots. <span style="color:var(--c-reported)">Amber = Reported</span>: two or more independent feeds above normal. <span style="color:var(--c-signal)">Grey-blue = Signal</span>: one feed well above normal.</li>
       <li><b>Shaded countries</b> have an ongoing or escalating situation in the news.</li>
-      <li><b><span style="color:var(--c-hazard)">Lime</span> marks natural hazards and weather warnings.</b> They're not security incidents and are kept separate.</li>
+      <li><b><span style="color:var(--c-hazard)">Lime</span> marks natural hazards and weather warnings.</b> They're not security incidents and are kept separate. Official red-level alerts (GDACS red, tsunami warnings, Met Office red) get a lime ring and join the tour as "Natural hazard".</li>
       <li><b>Cards</b> explain why each hotspot is there and link to the original reporting. Swipe, use ‹ › or the arrow keys. Touching the tour pauses it.</li>
+      <li><b>Visits are counted</b> with Cloudflare Web Analytics: no cookies, nothing that identifies you, just totals like page views, device type and country.</li>
       <li><b>Nothing here is confirmed.</b> These are automated tripwires, not verified events. Follow the links to the source.</li>
     </ul>
     <label class="intro-check"><input type="checkbox" id="introNever"> Don't show this again</label>
@@ -370,6 +373,8 @@ const nameOf = h => h.type === 'ongoing' ? h.name : (h.site && h.site.name) || h
 const shortName = h => nameOf(h).split(',')[0];
 const featureFor = c => c._f !== undefined ? c._f : (c._f = countryFeats.find(f => d3.geoContains(f, [c.lon, c.lat])) || null);
 const confWord = c => c >= 60 ? 'High' : c >= 30 ? 'Medium' : 'Low';
+// Hotspot level names; "hazard" is an official red alert, never a security incident
+const LVL = l => ({ reported: 'Reported', hazard: 'Natural hazard' })[l] || 'Signal';
 const hzLevel = s => (s.extra && s.extra.alert) || '';
 // GDACS red and tsunami warnings get the swirl; GDACS orange (droughts, slow floods) is a small dot
 const majorHazard = s => /gdacs_red|tsunami_(warning|threat|advisory|watch)/.test(s.kind) || (s.kind === 'met_warning' && hzLevel(s) === 'red');
@@ -435,11 +440,11 @@ function feedPills(h) {
     return `<span class="pill"><i style="background:${SCOL(s)}"></i>${SRC[s] || s} ${v}</span>`; }).join('');
 }
 function hotspotCard(h, full) {
-  const lvl = h.level === 'reported' ? 'Reported' : 'Signal';
+  const lvl = LVL(h.level);
   const why = (h.reason || '').split(' · expected:')[0];
   const bySrc = {}; cellSignals.forEach(s => (bySrc[s.source] = bySrc[s.source] || []).push(s));
   const groups = Object.entries(bySrc).sort((a, b) => b[1].length - a[1].length).map(([src, list]) => {
-    const f = (h.feeds || {})[src] || {}, norm = !f.baseline ? 'no baseline yet' : f.ratio ? `${f.ratio}× normal` : 'not usually seen here';
+    const f = (h.feeds || {})[src] || {}, norm = h.level === 'hazard' ? 'official alert' : !f.baseline ? 'no baseline yet' : f.ratio ? `${f.ratio}× normal` : 'not usually seen here';
     return `<div class="feedgroup"><div class="label"><i style="background:${SCOL(src)}"></i>${SRC_LONG[src] || src} · ${list.length} <small>${f.elevated ? '▲ ' : ''}${norm}</small></div>${list.slice().reverse().slice(0, full ? 4 : 2).map(sigLine).join('')}</div>`;
   }).join('');
   return `<div class="meta"><span class="pill lvl-${h.level}">${lvl}</span>${feedPills(h)}</div>
@@ -547,7 +552,7 @@ function renderNext() {
     const q = stops.length ? [1, 2, 3].map(k => (tourIdx + k) % stops.length).filter((v, i, a) => a.indexOf(v) === i && v !== tourIdx) : [];
     $('wNext').innerHTML = q.length ? q.map(i => { const h = stops[i];
       const sub = h.type === 'ongoing' ? `${h.state} · conflict share ${h.share}%` : h.expected ? `Expected: ${h.expected.name}, check before escalating` : (h.sources || []).map(s => SRC[s]).join(' + ') + (h.sources && h.sources.some(s => s === 'ioda' || s === 'infra' || s === 'radar') ? ' · cause not confirmed' : '');
-      const tag = h.type === 'ongoing' ? `<span class="pill lvl-ongoing">${h.state}</span>` : `<span class="pill lvl-${h.level}">${h.level} ${h.confidence ?? ''}</span>`;
+      const tag = h.type === 'ongoing' ? `<span class="pill lvl-ongoing">${h.state}</span>` : `<span class="pill lvl-${h.level}">${LVL(h.level)} ${h.confidence ?? ''}</span>`;
       return `<button class="queue-row" data-jump="${i}"><span class="n">${i + 1}/${stops.length}</span><span><b>${esc(shortName(h))}${h.type !== 'ongoing' && h.headline ? ' · ' + esc(h.headline.slice(0, 40)) : ''}</b><small class="${h.expected ? 'exp' : ''}">${esc(sub)}</small></span>${tag}</button>`; }).join('')
       : '<p class="empty" style="padding:10px 0">Nothing else on the tour.</p>';
     $('wNext').querySelectorAll('[data-jump]').forEach(b => b.onclick = () => jump(+b.dataset.jump));
@@ -555,8 +560,8 @@ function renderNext() {
   if (MODE === 'stream') renderStreamSide();
 }
 function renderWall() {
-  const rep = hotspots.filter(h => h.level === 'reported').length;
-  $('wCounts').textContent = `${hotspots.length} hotspots · ${rep} reported · ${hotspots.length - rep} signals · ${watching.length} watching`;
+  const rep = hotspots.filter(h => h.level === 'reported').length, hz = hotspots.filter(h => h.level === 'hazard').length;
+  $('wCounts').textContent = `${hotspots.length} hotspots · ${rep} reported · ${hotspots.length - rep - hz} signals${hz ? ` · ${hz} hazard` : ''} · ${watching.length} watching`;
   $('wSits').innerHTML = situationsHTML(true);
   $('wHaz').innerHTML = hazardsHTML(1);
   $('wWatchT').textContent = `Watching · ${watching.length}`;
@@ -574,7 +579,7 @@ function renderStreamLT() {
       <div class="box"><div><h2>${esc(focus.name)}</h2><p class="head">${esc((cellSignals[0] || {}).title || 'Sustained conflict coverage in the news')}</p><p class="why">Measured from how worldwide news is coded by GDELT. Not verified events.</p></div></div><div class="prog"><i data-prog></i></div>`;
     return;
   }
-  const f = focus, lvl = f.level === 'reported' ? 'Reported' : 'Signal';
+  const f = focus, lvl = LVL(f.level);
   const country = (nameOf(f).split(',').slice(-1)[0] || '').trim();
   el.innerHTML = `<div class="tagrow"><span class="lvl ${f.level}">${lvl}</span>${(f.sources || []).slice(0, 3).map(s => { const x = (f.feeds || {})[s] || {}; return `<span><i style="background:${SCOL(s)}"></i>${SRC[s]} ${x.ratio && x.baseline ? x.ratio + '×' : x.n || ''}</span>`; }).join('')}<span class="muted">${f.lat.toFixed(2)}°${f.lat >= 0 ? 'N' : 'S'} ${Math.abs(f.lon).toFixed(2)}°${f.lon >= 0 ? 'E' : 'W'}</span></div>
     <div class="box"><div><h2>${esc(shortName(f))}${country && country !== shortName(f) ? `<small>${esc(country)}</small>` : ''}</h2><p class="head">${esc(f.headline || '')}</p><p class="why">Why it's here: ${esc((f.reason || '').split(' · expected:')[0])}. Not confirmed by Ricochet.</p></div>
@@ -585,7 +590,7 @@ function renderStreamSide() {
   const s = situations[0]; if (s) items.push(`<div class="s-item ongoing"><div class="label">Ongoing · ${s.state === 'escalating' ? 'escalating ↑' : esc(s.trend)}</div><b>${esc(s.name)}</b><span>Conflict share ${s.share}% vs ${worldShare}% world average</span></div>`);
   const z = hazards.find(majorHazard); if (z) items.push(`<div class="s-item hz"><div class="label">Natural hazard · ${esc(z.kind.startsWith('gdacs') ? 'GDACS ' + hzLevel(z) : hzLevel(z))}</div><b>${esc(cap((z.extra && (z.extra.hazard || z.extra.weather)) || 'hazard'))} · ${esc((z.place || '').slice(0, 24))}</b><span>${esc(((z.extra && (z.extra.severity || z.extra.population)) || '').slice(0, 70))}</span></div>`);
   const n = stops.length ? stops[(tourIdx + 1) % stops.length] : null;
-  if (n && n !== focus) items.push(`<div class="s-item${n.type === 'ongoing' ? ' ongoing' : ''}"><div class="label">${n.type === 'ongoing' ? 'Ongoing' : n.level} · up next</div><b>${esc(shortName(n))}</b><span>${esc(n.type === 'ongoing' ? 'Sustained conflict coverage' : (n.sources || []).some(x => /ioda|infra|radar/.test(x)) ? 'Cause not confirmed' : (n.headline || '').slice(0, 60))}</span></div>`);
+  if (n && n !== focus) items.push(`<div class="s-item${n.type === 'ongoing' ? ' ongoing' : ''}"><div class="label">${n.type === 'ongoing' ? 'Ongoing' : LVL(n.level)} · up next</div><b>${esc(shortName(n))}</b><span>${esc(n.type === 'ongoing' ? 'Sustained conflict coverage' : (n.sources || []).some(x => /ioda|infra|radar/.test(x)) ? 'Cause not confirmed' : (n.headline || '').slice(0, 60))}</span></div>`);
   $('sSide').innerHTML = items.join('');
   $('sMeta').textContent = stops.length ? `${tourIdx + 1} / ${stops.length} · sources at ricochet.watch` : 'sources at ricochet.watch';
 }
@@ -732,11 +737,11 @@ function draw(t) {
     if (majorHazard(s)) { swirl(x, y, MODE === 'phone' ? 10 : 13, t); if (MODE !== 'phone' && !s.kind.startsWith('met')) label(x + 18, y - 2, (s.place || 'hazard').slice(0, 18), `${(s.extra && s.extra.hazard) || ''} · ${hzLevel(s)}`, PAL.hz, false, 3); }
     else { ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fillStyle = PAL.hz; ctx.globalAlpha = .7; ctx.fill(); ctx.globalAlpha = 1; } }
   for (const h of hotspots) { if (!vis([h.lon, h.lat])) continue;
-    const [x, y] = projection([h.lon, h.lat]), col = h.level === 'reported' ? PAL.rep : PAL.sig, on = focus && focus.cell === h.cell;
+    const [x, y] = projection([h.lon, h.lat]), col = h.level === 'reported' ? PAL.rep : h.level === 'hazard' ? PAL.hz : PAL.sig, on = focus && focus.cell === h.cell;
     if (!reduce) { const p = (t / 1600) % 1; ctx.beginPath(); ctx.arc(x, y, 8 + p * 22, 0, 7); ctx.strokeStyle = col; ctx.globalAlpha = (1 - p) * .9; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1; }
     ctx.beginPath(); ctx.arc(x, y, on ? 11 : 7, 0, 7); ctx.strokeStyle = col; ctx.lineWidth = on ? 3 : 2; ctx.stroke();
     ctx.beginPath(); ctx.arc(x, y, on ? 5 : 3, 0, 7); ctx.fillStyle = col; ctx.fill();
-    if (MODE !== 'phone' && (on || h.level === 'reported')) label(x + 18, y - 3, shortName(h).slice(0, 22), `${h.level} · ${h.confidence ?? ''}`, col, on && MODE === 'stream', on ? 9 : 5); }
+    if (MODE !== 'phone' && (on || h.level === 'reported')) label(x + 18, y - 3, shortName(h).slice(0, 22), `${LVL(h.level)} · ${h.confidence ?? ''}`, col, on && MODE === 'stream', on ? 9 : 5); }
   if (MODE !== 'phone') for (const s of situations.slice(0, 3)) { const f = featureFor(s); if (!f || !vis(f.c)) continue; const [x, y] = projection(f.c); label(x, y + 26, s.name, s.state, PAL.ongoing, false, focus && focus.key === 'c:' + s.country ? 8 : 2, true); }
   flushLabels();
   ctx.beginPath(); path({ type: 'Sphere' }); ctx.strokeStyle = 'rgba(135,150,166,.4)'; ctx.lineWidth = 1.2; ctx.stroke();

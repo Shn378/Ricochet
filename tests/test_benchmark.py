@@ -18,7 +18,7 @@ def feed(obs, exp=0.0, z=None, elevated=False, has_baseline=True, **kw):
 class FlagRules(unittest.TestCase):
     def test_flags_live_set(self):
         # Switched on 24 Oct with Shane's approval; the rest stay off until benchmarked and approved
-        self.assertEqual({k for k, v in rules.FLAGS.items() if v}, {"quake_strict", "severity", "na_admin_no_open"})
+        self.assertEqual({k for k, v in rules.FLAGS.items() if v}, {"quake_strict", "severity", "na_admin_no_open", "national_no_open"})
 
     def test_pair_signal(self):
         f = {"gdelt": feed(3.5, 1.0), "news": feed(3.5, 1.0)}
@@ -57,7 +57,7 @@ class FlagRules(unittest.TestCase):
         self.assertEqual(ev["level"], "signal")
         self.assertIn("73 killed", ev["reason"])
         nat = [{"source": "gdelt", "kind": "conflict_report_national", "score": 9.0, "title": "US", "url": "", "extra": "{}"}]
-        self.assertEqual(rules.evaluate("38:-98", nat, {}, hist)["level"], "signal")
+        self.assertEqual(rules.evaluate("38:-98", nat, {}, hist, flags={"national_no_open": False})["level"], "signal")
         self.assertIsNone(rules.evaluate("38:-98", nat, {}, hist, flags={"national_no_open": True})["level"])
 
     def test_na_admin_no_open(self):

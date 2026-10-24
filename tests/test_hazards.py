@@ -57,3 +57,34 @@ class Hazards(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OfficialAlertHotspots(unittest.TestCase):
+    """Official red alerts open their own "hazard" hotspot (Shane, 24 Oct); amber, orange and droughts don't."""
+    def setUp(self):
+        import os
+        from tests import helpers
+        from tracker import db
+        self.tmp = helpers.tmpdir()
+        db.DATA, db.DB_PATH, db.RAW_DIR = self.tmp, os.path.join(self.tmp, "t.db"), os.path.join(self.tmp, "raw")
+        self.con = db.connect()
+
+    def test_red_alerts_only(self):
+        import time
+        from tracker import db, server
+        now = int(time.time())
+        sig = lambda uid, kind, lat, lon, **extra: {"uid": uid, "source": "hazard", "kind": kind, "lat": lat, "lon": lon,
+                                                    "title": uid, "place": uid, "score": 3, "observed_at": now - 600, "extra": extra}
+        db.add_signals(self.con, [
+            sig("cyclone", "gdacs_red", 18.2, -77.3, hazard="tropical cyclone", alert="red", credit="GDACS"),
+            sig("drought", "gdacs_red", 5.5, 30.5, hazard="drought", alert="red", credit="GDACS"),
+            sig("flood", "gdacs_orange", 10.5, 10.5, hazard="flood", alert="orange"),
+            sig("met-red", "met_warning", 51.2, -0.4, alert="red", credit="Met Office"),
+            sig("met-amber", "met_warning", 57.5, -5.0, alert="amber", credit="Met Office"),
+            sig("tsunami", "tsunami_warning", -20.5, -175.5, hazard="tsunami", alert="warning", credit="NOAA"),
+        ])
+        server._cache.clear()
+        hs = {h["headline"]: h for h in server.hotspots(self.con) if h["level"] == "hazard"}
+        self.assertEqual(set(hs), {"cyclone", "met-red", "tsunami"})
+        self.assertIn("GDACS", hs["cyclone"]["reason"])
+        self.assertIn("not a security incident", hs["cyclone"]["reason"])
