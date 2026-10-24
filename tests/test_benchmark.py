@@ -59,6 +59,25 @@ class FlagRules(unittest.TestCase):
         self.assertEqual(rules.evaluate("38:-98", nat, {}, hist)["level"], "signal")
         self.assertIsNone(rules.evaluate("38:-98", nat, {}, hist, flags={"national_no_open": True})["level"])
 
+    def test_na_admin_no_open(self):
+        self.assertTrue(rules.na_admin({"source": "gdelt", "country": "US", "place": "Ohio, United States"}))
+        self.assertTrue(rules.na_admin({"source": "gdelt", "country": "US", "place": "Clark County, Nevada, United States"}))
+        self.assertTrue(rules.na_admin({"source": "gdelt", "country": "CA", "place": "British Columbia, Canada"}))
+        self.assertFalse(rules.na_admin({"source": "gdelt", "country": "US", "place": "Gulfport, Mississippi, United States"}))
+        self.assertFalse(rules.na_admin({"source": "news", "country": "US", "place": "Ohio, United States"}))
+        self.assertFalse(rules.na_admin({"source": "gdelt", "country": "UK", "place": "Kent, United Kingdom"}))
+        hist = {"gdelt": 200, "news": 200}
+        st = [{"source": "gdelt", "kind": "conflict_report", "score": 3.0, "title": "x", "url": "", "extra": "{}",
+               "country": "US", "place": "Ohio, United States"} for _ in range(6)]
+        self.assertEqual(rules.evaluate("40:-83", st, {}, hist, flags={"na_admin_no_open": False})["level"], "signal")
+        off = rules.evaluate("40:-83", st, {}, hist, flags={"na_admin_no_open": True})
+        self.assertIsNone(off["level"])
+        self.assertIn("state- or county-level", off["reason"])
+        # A town-level report alongside can still open it
+        town = st + [{"source": "gdelt", "kind": "conflict_report", "score": 3.0, "title": "y", "url": "", "extra": "{}",
+                      "country": "US", "place": "Columbus, Ohio, United States"} for _ in range(6)]
+        self.assertEqual(rules.evaluate("40:-83", town, {}, hist, flags={"na_admin_no_open": True})["level"], "signal")
+
     def test_listed_conflicts(self):
         self.assertTrue(conflicts.listed_near("50:30"))          # Kyiv
         self.assertTrue(conflicts.listed_near("18:-73"))         # Haiti

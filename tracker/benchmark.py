@@ -78,7 +78,7 @@ def freeze(con, inc):
         return None
     judge = sorted({c for p in inc["points"] for c in around(db.cell_of(*p))})
     wide = sorted({c for j in judge for c in around(j)})          # for "nearby" corroboration
-    q = f"SELECT source, kind, cell, score, title, url, extra, observed_at, fetched_at, country FROM signals " \
+    q = f"SELECT source, kind, cell, score, title, url, extra, observed_at, fetched_at, country, place FROM signals " \
         f"WHERE cell IN ({','.join('?' * len(wide))}) AND observed_at > ? AND observed_at <= ? ORDER BY observed_at"
     sigs = []
     for r in con.execute(q, (*wide, start - WINDOW, end + LATE)):
@@ -154,6 +154,9 @@ def score_incident(inc, snap, flags):
             "lead_min": round((fr - first["t"]) / 60) if fr else None}
 
 
+TIMES = defaultdict(float)     # seconds per stage, reported in the results
+
+
 def noise(con, variants, log=print):
     """Hotspots each variant would have opened over the last few days, hour by hour.
     Everything that doesn't depend on the variant (the window's signals, normal levels,
@@ -184,7 +187,11 @@ def noise(con, variants, log=print):
             by_cell[r["cell"]].append(r)
             texts[r["cell"]].append((r["source"], f"{r.get('title') or ''} {r.get('url') or ''}"))
         nearby = {cell: [x for n in around(cell) for x in texts.get(n, ())] for cell in by_cell}
+        t0 = time.time()
         exps, history = baseline.expectations_both(con, 6, now=t, cells=sorted(by_cell))
+        TIMES["noise_baseline"] += time.time() - t0
+        TIMES["noise_cells"] += len(by_cell)
+        t0 = time.time()
         day = t // 86400
         if day not in hot_by_day:
             h = _hot_cc(con, t)
@@ -200,6 +207,7 @@ def noise(con, variants, log=print):
                     opened[v][(cell, day)] = {"cell": cell, "day": iso(day * 86400)[:10], "level": ev["level"],
                                               "place": next((s["place"] for s in items if s.get("place")), None),
                                               "headline": (best.get("title") or "")[:140], "reason": ev["reason"]}
+        TIMES["noise_rules"] += time.time() - t0
         time.sleep(0.05)     # let the live engine have the CPU between hours
     return opened
 
@@ -238,14 +246,20 @@ def commit():
 def run(con=None, log=print):
     con = con or db.connect()
     started = time.time()
+    TIMES.clear()
     incs = load_incidents()
     snaps = {i["id"]: frozen(con, i, log) for i in incs}
+    TIMES["freeze"] = time.time() - started
     vs = variants()
     detail = {i["id"]: {"name": i["name"], "first_report": i.get("first_report")} for i in incs}
+    t0 = time.time()
     for v, flags in vs.items():
         for i in incs:
             detail[i["id"]][v] = score_incident(i, snaps[i["id"]], flags)
+    TIMES["incidents"] = time.time() - t0
+    t0 = time.time()
     opened = noise(con, vs, log)
+    TIMES["noise_total"] = time.time() - t0
     cur_open = set(opened["current"])
     summary = []
     for v, flags in vs.items():
@@ -266,12 +280,13 @@ def run(con=None, log=print):
         })
     res = {"run_at": iso(int(time.time())), "seconds": round(time.time() - started), "commit": commit(),
            "noise_days": NOISE_DAYS, "incidents": len(incs),
+           "timings": {k: round(v, 1) for k, v in TIMES.items()},
            "unscored": {i: s.get("status") for i, s in ((k, detail[k]["current"]) for k in detail) if s.get("status") != "ok"},
            "summary": summary, "detail": detail}
     os.makedirs(db.DATA, exist_ok=True)
     with open(RESULT, "w", encoding="utf-8") as f:
         json.dump(res, f, indent=1)
-    log(f"[benchmark] done in {res['seconds']} s: current {summary[0]['hits']}/{summary[0]['scored']} hits")
+    log(f"[benchmark] done in {res['seconds']} s ({res['timings']}): current {summary[0]['hits']}/{summary[0]['scored']} hits")
     return res
 
 

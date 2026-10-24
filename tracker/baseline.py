@@ -11,6 +11,7 @@ On first start, history is downloaded so baselines work within minutes:
 GDELT 72 hours, FIRMS 5 days, IODA 7 days.
 """
 import math
+import sqlite3
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -155,6 +156,26 @@ def expectations(con, window_hours, now=None, cells=None, median=False):
     return both["median" if median else "mean"], hist
 
 
+# Filtering by square keeps the lookup on the (cell, source, hour) key. Without it every bucket of
+# the feed for 4 weeks is read, which made the hourly benchmark noise pass crawl. SQLite since 3.32
+# allows 32,766 parameters; older builds stop at 999, so a "too many variables" error falls back.
+MAX_CELLS = 30000
+
+
+def _rows(con, now_hour, end, d, window_hours, source, want):
+    base = """SELECT cell, (? - hour) / 24 AS d, SUM(score) AS total FROM buckets
+              WHERE hour < ? AND hour >= ? - 24 * ? AND ((? - hour) % 24) < ? AND source = ?"""
+    args = (now_hour, end, now_hour, d, now_hour, window_hours, source)
+    if want:
+        try:
+            return con.execute(base + f" AND cell IN ({','.join('?' * len(want))}) GROUP BY cell, d",
+                               (*args, *sorted(want))).fetchall()
+        except sqlite3.OperationalError as e:
+            if "too many" not in str(e):
+                raise
+    return [r for r in con.execute(base + " GROUP BY cell, d", args) if not want or r["cell"] in want]
+
+
 def expectations_both(con, window_hours, now=None, cells=None):
     """Mean and median expectations from one pass over the buckets (the benchmark needs both).
     Returns ({"mean": exp, "median": exp}, hist)."""
@@ -170,18 +191,14 @@ def expectations_both(con, window_hours, now=None, cells=None):
         for c in cells:
             la, lo = map(int, c.split(":"))
             want.update(f"{la + a}:{lo + b}" for a in (-1, 0, 1) for b in (-1, 0, 1))
-    if want and len(want) > 3000:   # SQLite caps the number of parameters: just read everything
+    if want and len(want) > MAX_CELLS:   # past SQLite's parameter limit: read everything instead
         want = None
-    cell_sql = f" AND cell IN ({','.join('?' * len(want))})" if want else ""
     out = {"mean": defaultdict(float), "median": defaultdict(float)}
-    q = f"""SELECT cell, (? - hour) / 24 AS d, SUM(score) AS total FROM buckets
-           WHERE hour < ? AND hour >= ? - 24 * ? AND ((? - hour) % 24) < ?
-             AND source = ?{cell_sql} GROUP BY cell, d"""
     for s, d in days.items():
         if hist[s] < MIN_HISTORY_HOURS or d < 1:
             continue
         per_cell = defaultdict(list)
-        for r in con.execute(q, (now_hour, end, now_hour, d, now_hour, window_hours, s, *(sorted(want) if want else ()))):
+        for r in _rows(con, now_hour, end, d, window_hours, s, want):
             per_cell[r["cell"]].append(r["total"])
         for c, totals in per_cell.items():
             vals = sorted(totals + [0.0] * max(0, d - len(totals)))

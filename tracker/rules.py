@@ -17,6 +17,7 @@ FLAGS = {
     "severity": True,           # live 24 Oct (Shane): +2 hits, +21 openings. A report of 10+ killed counts whatever the baseline
     "listed_conflicts": False,  # hand-kept list of wars (conflicts.py) counts as "in conflict"
     "median_baseline": False,   # normal level = median day over 4 weeks, not the average
+    "na_admin_no_open": False,  # US/Canada GDELT reports placed only at a state/province or county can't open a hotspot alone
 }
 
 PHYSICAL = {"firms", "wiki"}   # signals the sensitive-site rule can lift
@@ -215,12 +216,38 @@ def _extra(s):
     return e or {}
 
 
+# GDELT places a story it can only pin to a US state, Canadian province or US county at that area's
+# centre ("Ohio, United States", "Clark County, Nevada, United States"). These are mostly local crime
+# coded as fighting: 12 of 24 noise hotspots in the 24 Oct audit.
+_COUNTY = re.compile(r"\b(county|parish|borough)\b", re.I)
+
+
+def na_admin(s):
+    """True for a GDELT report placed only at a US/Canada state, province or county."""
+    if s.get("source") != "gdelt" or s.get("country") not in ("US", "CA"):
+        return False
+    parts = [p.strip() for p in (s.get("place") or "").split(",") if p.strip()]
+    if len(parts) == 2:                       # "Ohio, United States", "British Columbia, Canada"
+        return True
+    return len(parts) == 3 and bool(_COUNTY.search(parts[0]))
+
+
 def evaluate(cell, items, expected, history, hot_countries=None, nearby=None, now=None, flags=None):
     """The whole hotspot decision for one square, shared by the live globe, replay and the
     benchmark. items: that square's signals in the window (context kinds already removed).
     Returns {"level", "reason", "feeds", "hot", "site", "expected_event"}."""
     flags = {**FLAGS, **(flags or {})}
     now = now or time.time()
+    if flags["na_admin_no_open"] and any(na_admin(s) for s in items):
+        # They can back up a hotspot something else opened, never open one themselves
+        inner = dict(flags, na_admin_no_open=False)
+        full = evaluate(cell, items, expected, history, hot_countries, nearby, now, inner)
+        if full["level"] in ("signal", "reported"):
+            rest = [s for s in items if not na_admin(s)]
+            alone = evaluate(cell, rest, expected, history, hot_countries, nearby, now, inner) if rest else None
+            if not alone or alone["level"] not in ("signal", "reported"):
+                return dict(full, level=None, reason="only US/Canada state- or county-level reports")
+        return full
     if flags["national_no_open"]:
         items = [s for s in items if s.get("kind") != "conflict_report_national"]
     by_src, n_src, max_src = defaultdict(float), defaultdict(int), defaultdict(float)
