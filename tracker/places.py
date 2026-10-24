@@ -7,6 +7,7 @@ Rules that keep false matches down:
 - world feeds only match bigger towns (50,000+) unless the country is named too
 - common English words that happen to be town names are ignored
 """
+import functools
 import gzip
 import json
 import math
@@ -268,11 +269,24 @@ def locate_slug(url, iso):
     return find_town(text, {iso}, False, (iso,), main_only=True) or find_named(text, {iso}, iso)
 
 
+_GRID = {}
+for _names, _la, _lo, _cc, _pop in _G["cities"]:
+    _GRID.setdefault((math.floor(_la), math.floor(_lo)), []).append((_la, _lo, _cc))
+
+
+@functools.lru_cache(maxsize=100000)
 def nearest_country(lat, lon):
-    """Country of the nearest town, for turning a hotspot into a country."""
-    best, bd = None, 1e9
-    for names, la, lo, cc, pop in _G["cities"]:
-        d = (la - lat) ** 2 + ((lo - lon) * math.cos(math.radians(lat))) ** 2
-        if d < bd:
-            best, bd = cc, d
-    return best if bd < 9 else None   # within ~3 degrees
+    """Country of the nearest town within ~3 degrees, for turning a hotspot into a country.
+    Looks only at grid squares that could hold such a town (it used to scan all 26,000 towns
+    every call, which was 94% of the benchmark's time)."""
+    c = math.cos(math.radians(lat))
+    span = 180 if c < 3 / 180 else min(180, math.ceil(3 / c) + 1)
+    best, bd = None, 9.0
+    for gla in range(math.floor(lat) - 3, math.floor(lat) + 4):
+        for k in range(-span, span + 1):
+            glo = (math.floor(lon) + k + 180) % 360 - 180
+            for la, lo, cc in _GRID.get((gla, glo), ()):
+                d = (la - lat) ** 2 + ((lo - lon) * c) ** 2
+                if d < bd:
+                    best, bd = cc, d
+    return best

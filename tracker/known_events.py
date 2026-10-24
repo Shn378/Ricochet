@@ -8,6 +8,7 @@ event doesn't explain also backs it up.
 
 Dates are UTC. Moveable festivals are listed per year and need adding each year.
 """
+import functools
 from datetime import datetime, timezone
 
 # name, start, end (MM-DD for every year, or YYYY-MM-DD for one year), countries (ISO2, or None for anywhere),
@@ -32,6 +33,7 @@ EVENTS = [
 ]
 
 
+@functools.lru_cache(maxsize=4096)
 def _span(start, end, year):
     def d(s, y):
         return datetime.strptime(s if len(s) == 10 else f"{y}-{s}", "%Y-%m-%d").replace(tzinfo=timezone.utc)
