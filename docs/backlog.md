@@ -90,6 +90,29 @@ Monitoring; site-name placement for stories (Shaybah miss) is not built yet.
   terms say what's counted.
 - Claude may do anything else it judges should be done (Shane: "I approve"), within the CLAUDE.md principles.
 
+### Why hotspots open late (diagnosed 24 Oct from live signals vs the benchmark)
+
+Mostly the **rules wait**, not the data. In most misses and late hits the first signals were in the
+square hours before the first public report:
+- Never opened despite early signals: gaza-20 (26 GDELT from 01:30, report 08:51), kharkiv-poltava-21
+  (GDELT/news ~4 h early), tirana-20, shabwa-20, menaka-20 (GDELT 3-5 h early), chernihiv-23 (aircraft
+  5½ h early), mirage-20 (aircraft 7 h early), toledo-21 (fires 3¾ h early).
+- Opened hours after the first signal: riyadh-20 (GDELT from 07:00, open 13:00), dammam-21 (20:15 -> 03:00),
+  mukalla-21 (outage 08:25 -> 15:30). A 6-hour sum has to build up before it beats the normal level.
+- Feed delays (mostly upstream, little to win): FIRMS 3-4 h (NASA near-real-time); status pages and Cloudflare
+  Radar annotations 2-5 h; GDELT on time; news usually 3-40 min but 1½-2 h in quiet countries.
+- The news budget uses ~2 of its 30 checks/min. Feeds now use conditional checks (ETag/Last-Modified), so
+  `quiet_minutes = 10` in the VM's config.ini (from 30) is cheap and polite: Shane to run
+  `sed -i 's/^quiet_minutes *= *30/quiet_minutes = 10/' ~/ricochet/config.ini && sudo systemctl restart ricochet`.
+
+Next experiments (as FLAGS, off, judged by the benchmark; ship only with zero extra openings):
+1. **Rate, not total**: compare the last 1-2 hours with the same hours' normal as well as the 6-hour window,
+   so a sudden burst trips before the 6-hour sum catches up (riyadh, dammam, gaza-20).
+2. **Chronic squares** (Gaza, Kyiv): judge against the square's own recent days rather than a 4-week mean.
+3. **Echo first, news confirms**: aircraft/fires/outage moderately above normal held as **watch** (not on the
+   tour), promoted the moment any report lands nearby; lead time then comes from the echo's timestamp.
+   Mirage and Chernihiv are the test cases. Watch items don't count as openings.
+
 Moved out of CLAUDE.md on 23 Oct to keep every session's context small. Read when planning work.
 
 ## Open items

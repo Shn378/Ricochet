@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 from .. import places
-from ..net import get
+from ..net import get_if_changed
 
 NAME = "news"
 
@@ -114,7 +114,10 @@ def to_signals(items, feed, now):
 
 
 def fetch(feed, now):
-    raw = get(feed["url"], timeout=30)
+    """Returns (raw, items, signals, newest publish time, (etag, last_modified)). Unchanged feeds give nothing."""
+    raw, etag, modified = get_if_changed(feed["url"], feed.get("etag"), feed.get("modified"), timeout=30)
+    if raw is None:
+        return b"", [], [], None, (etag, modified)
     items = parse_feed(raw)
     newest = max((min(i["published"], now) for i in items if i["published"]), default=None)   # some feeds stamp local time as UTC
-    return raw, items, to_signals(items, feed, now), newest
+    return raw, items, to_signals(items, feed, now), newest, (etag, modified)

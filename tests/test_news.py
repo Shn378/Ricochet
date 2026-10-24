@@ -89,3 +89,34 @@ class Budget(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConditionalChecks(unittest.TestCase):
+    """An unchanged feed answers 304 and costs nothing; the validators are sent back next time."""
+    def test_etag_round_trip(self):
+        import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        from tracker.collectors import news
+        body = b'<rss><channel><item><title>Explosion at depot in Kharkiv</title><link>https://e.com/a</link></item></channel></rss>'
+        seen = []
+
+        class H(BaseHTTPRequestHandler):
+            def do_GET(self):
+                seen.append(self.headers.get("If-None-Match"))
+                if self.headers.get("If-None-Match") == '"v1"':
+                    self.send_response(304); self.end_headers(); return
+                self.send_response(200); self.send_header("ETag", '"v1"'); self.end_headers(); self.wfile.write(body)
+            def log_message(self, *a):
+                pass
+
+        srv = HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            feed = {"name": "t", "country": "UA", "layer": 2, "url": f"http://127.0.0.1:{srv.server_port}/feed", "last_ok": None}
+            raw, items, sigs, newest, (etag, mod) = news.fetch(feed, 1_800_000_000)
+            self.assertEqual((len(items), etag), (1, '"v1"'))
+            raw, items, sigs, newest, (etag2, _) = news.fetch(dict(feed, etag=etag), 1_800_000_000)
+            self.assertEqual((raw, items, sigs, etag2), (b"", [], [], '"v1"'))
+            self.assertEqual(seen, [None, '"v1"'])
+        finally:
+            srv.shutdown()

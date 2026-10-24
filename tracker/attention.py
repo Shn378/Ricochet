@@ -41,6 +41,18 @@ CREATE TABLE IF NOT EXISTS sources (
     added       INTEGER
 );
 """
+# Added later: the feed's ETag / Last-Modified, for conditional checks
+LATER_COLUMNS = ("etag TEXT", "modified TEXT")
+
+
+def ensure_schema(con):
+    con.executescript(SCHEMA)
+    have = {r[1] for r in con.execute("PRAGMA table_info(sources)")}
+    for col in LATER_COLUMNS:
+        if col.split()[0] not in have:
+            with db._lock:
+                con.execute(f"ALTER TABLE sources ADD COLUMN {col}")
+                con.commit()
 
 
 class Budget:
@@ -52,7 +64,7 @@ class Budget:
         self.lease = 60
         self.log = log
         self.con = db.connect()
-        self.con.executescript(SCHEMA)
+        ensure_schema(self.con)
         self.hot_countries = set()
         self.tokens = 0.0
         self.pool = ThreadPoolExecutor(max_workers=4)
@@ -142,7 +154,8 @@ class Budget:
         now = int(time.time())
         feed = {"name": s["name"], "country": s["country"], "layer": s["layer"]}
         try:
-            raw, items, sigs, newest = news.fetch(dict(feed, url=s["url"], last_ok=s["last_ok"]), now)
+            raw, items, sigs, newest, (etag, modified) = news.fetch(
+                dict(feed, url=s["url"], last_ok=s["last_ok"], etag=s.get("etag"), modified=s.get("modified")), now)
             if s["layer"] == 5:
                 # Probation: shown on cards and the map, tallied, but never counted towards a hotspot
                 for sg in sigs:
@@ -152,8 +165,8 @@ class Budget:
             added = db.add_signals(self.con, sigs, snap, sha)
             with db._lock:
                 self.con.execute("""UPDATE sources SET last_checked=?, last_ok=?, fails=0, last_error=NULL, status='active',
-                                    checks=checks+1, signals=signals+?, last_new=MAX(COALESCE(last_new,0), ?) WHERE id=?""",
-                                 (now, now, added, newest or 0, s["id"]))
+                                    checks=checks+1, signals=signals+?, last_new=MAX(COALESCE(last_new,0), ?), etag=?, modified=? WHERE id=?""",
+                                 (now, now, added, newest or 0, etag, modified, s["id"]))
                 self.con.commit()
             if added:
                 self.log(f"[news] {s['name']}: {added} new incident report(s)")
