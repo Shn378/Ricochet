@@ -120,7 +120,7 @@ button.sitrow { width: 100%; background: none; border: 0; text-align: left; padd
 /* globe */
 .globe-wrap { position: relative; min-height: 0; }
 canvas#globe { width: 100%; height: 100%; display: block; touch-action: pan-y; }
-.key-btn { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: flex; gap: 8px; align-items: center; background: rgba(11,17,24,.75); border: 1px solid var(--line); border-radius: 22px; padding: 8px 14px; font: 13px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(4px); }
+.key-btn { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: flex; gap: 8px; align-items: center; background: rgba(11,17,24,.75); border: 1px solid var(--line); border-radius: 22px; padding: 8px 14px; font: 13px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; backdrop-filter: blur(4px); cursor: pointer; }
 .key { position: absolute; left: 12px; bottom: 60px; z-index: 3; background: rgba(11,17,24,.9); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font: 12px var(--f-mono); display: grid; gap: 6px; backdrop-filter: blur(4px); min-width: 230px; }
 .key .k2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; padding-top: 8px; border-top: 1px solid var(--line); }
 .key span { display: flex; gap: 8px; align-items: center; }
@@ -241,7 +241,7 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
 <!-- ======== Shared globe (moved into each mode's slot at start) ======== -->
 <div class="globe-wrap" id="globeWrap">
   <canvas id="globe" aria-label="Globe of current hotspots and signals"></canvas>
-  <div class="hz-badge" id="hzBadge" hidden></div>
+  <button class="hz-badge" id="hzBadge" hidden aria-label="Natural hazard: show it on the globe"></button>
   <button class="key-btn" id="keyBtn" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/></svg>Key</button>
   <div class="key" id="key" hidden>
     <div class="label">Map key</div>
@@ -640,11 +640,15 @@ function renderHealth() {
   }
 }
 
+// The badge names the lime swirl on screen: shown only while that hazard is on the visible side of
+// the globe (draw() toggles it); tapping it flies there.
+let badgeHz = null;
 function renderHazardBadge() {
-  const b = $('hzBadge'); const z = hazards.find(s => /gdacs_red|tsunami_(warning|threat)/.test(s.kind));
-  if (MODE !== 'phone' || !z) { b.hidden = true; return; }
-  const pl = (z.place || '').split(',')[0]; b.innerHTML = `${SWIRL}Natural hazard · ${esc(pl.length > 18 ? pl.slice(0, 17) + '…' : pl)}`; b.hidden = false;
+  const b = $('hzBadge'); badgeHz = MODE === 'phone' ? hazards.find(s => /gdacs_red|tsunami_(warning|threat)/.test(s.kind)) || null : null;
+  if (!badgeHz) { b.hidden = true; return; }
+  const pl = (badgeHz.place || '').split(',')[0]; b.innerHTML = `${SWIRL}Natural hazard · ${esc(pl.length > 18 ? pl.slice(0, 17) + '…' : pl)}`;
 }
+$('hzBadge').onclick = () => { if (badgeHz) { pause(); tween = null; flyTo(badgeHz.lon, badgeHz.lat, 1.4); } };
 function renderAll() {
   renderControls(); renderCard(); renderNext();
   if (MODE === 'wall') renderWall();
@@ -720,6 +724,7 @@ function draw(t) {
     ctx.beginPath(); path(f); ctx.fillStyle = on ? 'rgba(217,120,90,.55)' : 'rgba(217,120,90,.38)'; ctx.fill(); ctx.strokeStyle = PAL.ongoing; ctx.lineWidth = on ? 1.6 : .8; ctx.stroke(); }
   ctx.beginPath(); path(borders); ctx.strokeStyle = PAL.border; ctx.lineWidth = .5; ctx.stroke();
   const centre = [-rot[0], -rot[1]], vis = p => d3.geoDistance(p, centre) < Math.PI / 2 - .03;
+  if (badgeHz) { const show = d3.geoDistance([badgeHz.lon, badgeHz.lat], centre) < Math.PI / 2 - .25; const b = $('hzBadge'); if (b.hidden === show) b.hidden = !show; }
   for (const s of signals) { if (s.lat == null || !vis([s.lon, s.lat])) continue; const [x, y] = projection([s.lon, s.lat]);
     const faint = s.kind === 'military_air' || s.source === 'firms'; ctx.beginPath(); ctx.arc(x, y, faint ? 1.8 : 3, 0, 7);
     ctx.fillStyle = SCOL(s.source); ctx.globalAlpha = faint ? .4 : .9; ctx.fill(); ctx.globalAlpha = 1; }
