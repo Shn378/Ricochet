@@ -19,6 +19,7 @@ INCIDENT = re.compile(r"""\b(
     attack(ed|s|er)?|assassinat\w*|stab(bed|bing|s)?|shoot(ing|s)?|shot\s+dead|gunm[ae]n|gunfire|opened\s+fire|
     explosion|explosive|blast|bomb(ing|ed|s)?|grenade|drone\s+strike|air\s*strike|missile|rocket|shelling|shelled|
     killed|massacre|hostage|siege|ramm(ed|ing)|car\s+attack|terror\w*|riot(s|ing|ers)?|clash(es|ed)?|
+    drones?\s+(crash\w*|debris|wreckage|fragments?)|(crashed|downed)\s+drones?|shot\s+down|
     lockdown|evacuat\w*|curfew|coup|mutiny|insurgent|militant|ambush|kidnap\w*|abduct\w*|
     attentat|fusillade|explosion|émeutes?|tué[es]*|blessé[es]*|poignard\w*|
     anschlag|explosion|schüsse|getötet|messerangriff|
@@ -89,12 +90,13 @@ def to_signals(items, feed, now):
         if not where:
             continue
         strong = bool(STRONG.search(text))
-        score = (2.0 if strong else 1.2) * (1.0 if where["precision"] == "town" else 0.5)
+        exact = where["precision"] in ("town", "site")      # a named facility is as exact as a town
+        score = (2.0 if strong else 1.2) * (1.0 if exact else 0.5)
         out.append({
             # keyed on the article link, so the same story on two desks counts once
             "uid": "news:" + hashlib.sha1((it["link"].split("?")[0].rstrip("/") or it["guid"] or it["title"]).encode()).hexdigest()[:16],
             "source": NAME,
-            "kind": "news_item" if where["precision"] == "town" else "news_item_national",
+            "kind": "news_item" if exact else "news_item_national",
             "lat": where["lat"], "lon": where["lon"], "place": where["place"], "country": where["country"],
             "title": f"{feed['name']}: {it['title']}"[:240],
             "url": it["link"],

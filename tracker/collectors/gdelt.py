@@ -13,6 +13,7 @@ import urllib.parse
 import zipfile
 from datetime import datetime, timedelta, timezone
 
+from .. import places
 from ..net import get
 
 NAME = "gdelt"
@@ -112,6 +113,13 @@ def parse_export(csv_bytes, counts=None):
             continue
         national = r[C_GEO_TYPE] == "1"   # placed at the country's centre, not a town
         url = r[C_URL]
+        place, placed = r[C_GEO_NAME], None
+        if national:
+            # Try the web address for a town, facility or sea in that country (24 Oct audit: a ship
+            # sunk off Constanta sat at the middle of Romania)
+            spot = places.locate_slug(url, places.FIPS_TO_ISO.get(cc))
+            if spot:
+                lat, lon, place, national, placed = spot["lat"], spot["lon"], spot["place"], False, spot["precision"]
         cell = f"{int(lat // 1)}:{int(lon // 1)}"
         key = hashlib.sha1(f"{url}|{cell}".encode()).hexdigest()[:16]
         score = min(5.0, 1 + int(r[C_SOURCES] or 1) / 2) * (0.5 if national else 1.0) * factor
@@ -124,13 +132,14 @@ def parse_export(csv_bytes, counts=None):
             "source": NAME,
             "kind": "conflict_report_national" if national else "conflict_report",
             "lat": lat, "lon": lon,
-            "place": r[C_GEO_NAME],
+            "place": place,
             "country": cc,
-            "title": f"News report: {what} ({r[C_GEO_NAME]})",
+            "title": f"News report: {what} ({place})",
             "url": url,
             "score": score,
             "observed_at": int(when.timestamp()),
-            "extra": {"cameo": code, "mentions": r[C_MENTIONS], "sources": r[C_SOURCES], "events": events, "downweighted": why},
+            "extra": {"cameo": code, "mentions": r[C_MENTIONS], "sources": r[C_SOURCES], "events": events, "downweighted": why,
+                      **({"placed_from_url": placed} if placed else {})},
         }
     return list(best.values())
 

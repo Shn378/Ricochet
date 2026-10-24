@@ -12,6 +12,7 @@ import json
 import math
 import os
 import re
+import unicodedata
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 with gzip.open(os.path.join(_HERE, "gazetteer.json.gz"), "rt", encoding="utf-8") as f:
@@ -42,8 +43,13 @@ for names, lat, lon, cc, pop in _G["cities"]:
 _MAXWORDS = 3
 
 _COUNTRY_NAMES = {}
+_PLACE_WORDS = set()     # words that name a place, not a people, party or leader
 for iso, c in COUNTRIES.items():
     _COUNTRY_NAMES[c["name"].lower()] = iso
+    _PLACE_WORDS.add(c["name"].lower())
+_PLACE_WORDS |= {"uk", "britain", "england", "scotland", "wales", "northern ireland", "us", "usa", "america",
+                 "united states", "russia", "syria", "iran", "turkey", "türkiye", "taiwan", "south korea", "north korea",
+                 "gaza", "west bank", "palestine", "myanmar", "drc", "congo", "ivory coast"}
 # Other names, demonyms, and actors that pin a story to a country
 for alias, iso in {
         "uk": "GB", "britain": "GB", "british": "GB", "england": "GB", "english": "GB", "scotland": "GB", "scottish": "GB",
@@ -75,20 +81,71 @@ def country_centre(iso):
     return (c["ll"][0], c["ll"][1], c["n"]) if c else None
 
 
-def countries_in(text):
-    """Countries a text points at, in order of first mention."""
-    seen = []
+_LOCATIVE = re.compile(r"\b(in|on|at|over|across|into|near|off|inside|from)\s+(the\s+)?$", re.I)
+
+
+def _mentions(text):
+    """(iso, is_place, after_in_on_at) per country mention, in order."""
+    out = []
     for m in _COUNTRY_RE.finditer(text):
         word = m.group(1)
         if word.lower() == "us" and word != "US":   # "us" the pronoun, not the country
             continue
-        iso = _COUNTRY_NAMES[word.lower()]
+        out.append((_COUNTRY_NAMES[word.lower()], word.lower() in _PLACE_WORDS,
+                    bool(_LOCATIVE.search(text[max(0, m.start() - 12):m.start()]))))
+    return out
+
+
+def countries_in(text):
+    """Countries a text points at, in order of first mention."""
+    seen = []
+    for iso, _, _ in _mentions(text):
         if iso not in seen:
             seen.append(iso)
     return seen
 
 
-def find_town(text, allowed=None, world=False, named=()):
+def where_country(text):
+    """The country a story happens in, when no town says so. "Russian drone crashes in Moldova":
+    Moldova (a place, after "in"), not Russia (who did it). Order: a place after in/on/at/off...,
+    then the first place named, then the first people, party or leader named."""
+    ms = _mentions(text)
+    for want in (lambda p, l: p and l, lambda p, l: p, lambda p, l: True):
+        for iso, place, loc in ms:
+            if want(place, loc):
+                return iso
+    return None
+
+
+with open(os.path.join(_HERE, "named_places.json"), encoding="utf-8") as f:
+    _NAMED = json.load(f)
+_FAC_RE = re.compile(r"(?<![\w-])(" + "|".join(sorted(map(re.escape, _NAMED["facilities"]), key=len, reverse=True)) + r")(?![\w-])", re.I)
+_SEA_RE = re.compile(r"(?<![\w-])(" + "|".join(sorted(map(re.escape, _NAMED["seas"]), key=len, reverse=True)) + r")(?![\w-])", re.I)
+
+
+def find_named(text, allowed=None, about=None):
+    """A facility or sea named in the text (hand-kept list). allowed: ISO2 codes a facility may be in;
+    about: the country the story is about, to pick the right stretch of a sea."""
+    for m in _FAC_RE.finditer(text):
+        lat, lon, cc, name = _NAMED["facilities"][m.group(1).lower()]
+        if allowed is None or cc in allowed:
+            return {"lat": lat, "lon": lon, "place": f"{name}, {COUNTRIES.get(cc, {}).get('name', cc)}",
+                    "country": cc, "precision": "site"}
+    m = _SEA_RE.search(text)
+    if m:
+        sea = _NAMED["seas"][m.group(1).lower()]
+        lat, lon = sea.get("near", {}).get(about) or sea["at"]
+        return {"lat": lat, "lon": lon, "place": m.group(1).title().replace(" Of ", " of "), "country": about,
+                "precision": "sea"}
+    return None
+
+
+def _fold(name):
+    """"Constanţa" -> "constanta": web addresses drop the accents."""
+    return "".join(c for c in unicodedata.normalize("NFKD", name) if not unicodedata.combining(c)).lower()
+
+
+def find_town(text, allowed=None, world=False, named=(), main_only=False):
     """Best town mentioned in the text. allowed: set of ISO2 codes, or None for anywhere."""
     words = _WORD.findall(text)
     best = None
@@ -104,6 +161,9 @@ def find_town(text, allowed=None, world=False, named=()):
                 continue
             for lat, lon, cc, pop, name, main in cands:
                 if allowed is not None and cc not in allowed:
+                    continue
+                said = " ".join(chunk).lower()
+                if main_only and (said in _COUNTRY_NAMES or not (main or _fold(name) == said)):
                     continue
                 # Unanchored world-desk stories: only big, unambiguous towns
                 if world and cc not in named and (pop < 200000 or not main):
@@ -129,13 +189,33 @@ def locate(text, feed_country=None, towns_only=False):
     else:
         allowed, world = (set(named) if named else None), not named
     town = find_town(text, allowed, world, named)
-    if town or towns_only:
+    if town:
         return town
-    iso = (feed_country if feed_country in named else named[0]) if named else feed_country
+    about = feed_country if feed_country in named else (where_country(text) or feed_country)
+    spot = find_named(text, allowed, about)
+    if spot or towns_only:
+        return spot
+    iso = about
     if iso and country_centre(iso):
         lat, lon, name = country_centre(iso)
         return {"lat": lat, "lon": lon, "place": name, "country": iso, "precision": "country"}
     return None
+
+
+def locate_slug(url, iso):
+    """Re-place a story GDELT could only pin to a country's centre, from words in its web address:
+    a town in that country, a named facility, or a sea ("romania-...-black-sea-ship-..." -> off
+    Constanta). Returns a place dict or None."""
+    path = re.sub(r"^https?://[^/]+", "", url or "").split("?")[0]
+    # Only the article's own slug: the longest hyphenated segment, not section folders ("baton_rouge/opinion")
+    segs = [g for g in path.split("/") if g.count("-") >= 2]
+    if not segs:
+        return None
+    words = [w for w in re.split(r"[\-_.]+", max(segs, key=len)) if w.isalpha() and len(w) > 1]
+    text = " ".join(w.capitalize() for w in words)
+    if not text or not iso:
+        return None
+    return find_town(text, {iso}, False, (iso,), main_only=True) or find_named(text, {iso}, iso)
 
 
 def nearest_country(lat, lon):
