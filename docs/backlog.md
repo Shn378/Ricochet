@@ -108,6 +108,9 @@ square hours before the first public report:
 Next experiments (as FLAGS, off, judged by the benchmark; ship only with zero extra openings):
 1. **Rate, not total**: compare the last 1-2 hours with the same hours' normal as well as the 6-hour window,
    so a sudden burst trips before the 6-hour sum catches up (riyadh, dammam, gaza-20).
+   **Tried 24 Oct (`burst` flag, off):** 0 hits gained, 2 incidents 15 min earlier (trappes, riyadh), 2 extra
+   openings (Florida prison fire next to a small airfield, a Hyderabad assault). Fails the ship rule and the gain
+   is small: the late openings aren't bursts, they're slow builds or chronic squares. Left off; 2 and 3 next.
 2. **Chronic squares** (Gaza, Kyiv): judge against the square's own recent days rather than a 4-week mean.
 3. **Echo first, news confirms**: aircraft/fires/outage moderately above normal held as **watch** (not on the
    tour), promoted the moment any report lands nearby; lead time then comes from the echo's timestamp.
