@@ -12,7 +12,7 @@ from collections import defaultdict
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import baseline, db, known_events, rules, situations
+from . import baseline, db, glance, known_events, rules, situations
 
 WEB = os.path.join(db.ROOT, "web")
 SOURCES = ["news", "gdelt", "ioda", "radar", "infra", "wiki", "firms", "adsb", "ais", "seismic", "hazard"]
@@ -161,6 +161,7 @@ def _hotspots(con, hours=6, limit=40, debug=None):
             "reason": reason,
             "expected": {"name": expected_event["name"], "note": expected_event["note"]} if expected_event else None,
             "site": site,
+            "glance": glance.build(feeds, items, site, expected_event),
             "country": (cc := rules.country_of(cell, items)),
             "threat_level": threat_level(cc),
             "first": items[0]["observed_at"],
@@ -194,6 +195,8 @@ def _alert_hotspots(con, taken):
             "place": last["place"], "headline": last["title"],
             "reason": f"official red-level alert from {credit} (natural hazard, not a security incident)",
             "expected": None, "site": None,
+            "glance": {"lines": [{"feed": "hazard", "state": "spike", "text": f"Official red alert ({credit})",
+                                  "note": "natural hazard, not a security incident"}], "active": 1, "site": None, "expected": None},
             "country": last["country"] or rules.country_of(cell, items), "threat_level": None,   # a terror threat level says nothing about a storm
             "first": items[0]["observed_at"], "last": last["observed_at"],
         })

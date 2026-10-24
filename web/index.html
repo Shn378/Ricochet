@@ -53,6 +53,15 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; ani
 .pill.lvl-signal { color: var(--c-signal); border-color: var(--c-signal); }
 .pill.lvl-watch { color: var(--muted); }
 .pill.lvl-hazard { color: var(--c-hazard); border-color: var(--c-hazard); }
+/* At a glance: what is blinking, one line per feed */
+.glance { display: grid; gap: 6px; margin: 4px 0 2px; }
+.gl { display: grid; grid-template-columns: 14px 10px 1fr; gap: 8px; align-items: baseline; font-size: 15px; line-height: 1.35; }
+.gl > i { width: 9px; height: 9px; border-radius: 50%; align-self: center; }
+.gl > em { font-style: normal; font-size: 12px; text-align: center; }
+.gl.spike > em { color: var(--c-reported); } .gl.above > em { color: var(--fg); } .gl.normal { color: var(--muted); }
+.gl span small { color: var(--muted); font-size: inherit; }
+.gl-facts { font: 12px var(--f-mono); color: var(--muted); letter-spacing: .02em; }
+body[data-mode="wall"] .gl { font-size: 18px; }
 .pill.lvl-ongoing, .pill.lvl-escalating { color: var(--bg); background: var(--c-ongoing); border-color: var(--c-ongoing); }
 .pill.hz { color: var(--c-hazard); border-color: var(--c-hazard); }
 .pill.hz-red { color: #fff; background: #c8423b; border-color: #c8423b; }
@@ -439,6 +448,16 @@ function feedPills(h) {
   return (h.sources || []).map(s => { const f = (h.feeds || {})[s] || {}; const v = f.ratio && f.baseline ? `${f.ratio}×` : f.n || '';
     return `<span class="pill"><i style="background:${SCOL(s)}"></i>${SRC[s] || s} ${v}</span>`; }).join('');
 }
+// What is blinking, from the engine's own numbers (tracker/glance.py): ▲ well above normal, ● above, ○ usual
+function glanceHTML(h) {
+  const g = h.glance; if (!g || !g.lines) return '';
+  const icon = { spike: '▲', above: '●', normal: '○' };
+  const facts = [`First signal ${hhmm(h.first)}`, `${g.active} feed${g.active === 1 ? '' : 's'} above normal`];
+  if (g.site) facts.push(`Sensitive site: ${g.site}`);
+  if (g.expected) facts.push(`Expected: ${g.expected}`);
+  return `<div class="glance">${g.lines.map(l => `<div class="gl ${l.state}"><em>${icon[l.state] || '·'}</em><i style="background:${SCOL(l.feed)}"></i><span><b>${esc(l.text)}</b> <small>· ${esc(l.note)}</small></span></div>`).join('')}</div>
+    <div class="gl-facts">${facts.map(esc).join(' · ')}</div>`;
+}
 function hotspotCard(h, full) {
   const lvl = LVL(h.level);
   const why = (h.reason || '').split(' · expected:')[0];
@@ -450,8 +469,8 @@ function hotspotCard(h, full) {
   return `<div class="meta"><span class="pill lvl-${h.level}">${lvl}</span>${feedPills(h)}</div>
     <h2>${esc(shortName(h))}</h2>
     <div class="where">${esc(nameOf(h))} · ${Math.abs(h.lat).toFixed(2)}°${h.lat >= 0 ? 'N' : 'S'} ${Math.abs(h.lon).toFixed(2)}°${h.lon >= 0 ? 'E' : 'W'}</div>
+    ${glanceHTML(h)}
     <div class="label why-l">Why it's here</div><p class="why">${esc(why)}</p>
-    ${h.site ? `<p class="note">Sensitive site: <b style="color:var(--fg)">${esc(h.site.name)}</b> (${esc(h.site.kind)})</p>` : ''}
     ${h.expected ? `<p class="expected"><b>Expected: ${esc(h.expected.name)}.</b> ${esc(h.expected.note)} Check before escalating.</p>` : ''}
     ${h.threat_level ? `<p class="note">${esc(h.threat_level.label)}: <b style="color:var(--fg)">${esc(h.threat_level.level)}</b> (${esc(h.threat_level.meaning)}). <a href="${esc(h.threat_level.url)}" target="_blank" rel="noopener">Official page</a></p>` : ''}
     ${h.confidence != null ? confBlock(h.confidence) : ''}
