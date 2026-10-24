@@ -36,6 +36,20 @@ Done 24 Oct (00:00-01:00):
 - New `hazards` collector (GDACS red/orange, NOAA PTWC/NTWC): context only until Shane decides
   whether GDACS red / tsunami warnings can open a hotspot. GOV.UK alerts parked: needs alert-area shapes.
 
+Done 24 Oct (Sat morning, Shane at the laptop):
+- New UI is the default (old layout at ?ui=old until ~31 Oct; then delete web/old.html).
+- Audit proposals, all approved by Shane: (1) `na_admin_no_open` switch, benchmarking; (2) placement: where
+  beats who, named facilities/seas (`named_places.json`), GDELT country-centre stories re-placed from the slug,
+  drone-crash wording; (3) Ukrainska Pravda (UA) + Kyiv Independent on probation, Ukrainian words/endings.
+- News items stamped before our last good read are dated to that read (UP EN's early stamps).
+- Audit task instructions updated (reads /api/audit + /api/benchmark, threat levels, adds incidents to the repo).
+  Shane to attach Shn378/Ricochet to the "Nightly Audit Report" task and delete the old disabled "Nightly Audit".
+- Gemini = on-demand helper (GEMINI.md, docs/gemini-jobs.md). BigQuery client (tracker/bq.py) waiting on the key.
+- Licence audit (docs/licences.md); draft terms page (web/terms.html, unlinked); FIRMS disclaimer linked.
+- Found: Haiti never qualifies as Ongoing (<400 GDELT events/week) and Ukraine isn't Ongoing either (huge
+  general coverage dilutes its conflict share to 1.16x world). Proposal: show the hand-kept conflicts list
+  (conflicts.py) as its own "Armed conflict" layer on the globe, display only (rules unchanged).
+
 Proposals from the 24 Oct audit (Shane to decide):
 - US/Canada state- or county-level GDELT stories can't open a hotspot alone (12 of 24 noise hotspots).
 - Place stories at ports, sites and offshore points, not country centres (Khoryv off Constanta sat at Romania's centre).
