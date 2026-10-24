@@ -32,7 +32,7 @@ DEFAULTS = {
 
 
 def load_config():
-    cfg = configparser.ConfigParser()
+    cfg = configparser.ConfigParser(strict=False)
     cfg.read_dict(DEFAULTS)
     if os.path.exists(CONFIG_PATH):
         cfg.read(CONFIG_PATH, encoding="utf-8")

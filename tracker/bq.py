@@ -40,7 +40,7 @@ _token = {"value": None, "until": 0}
 def settings(cfg=None):
     """(key dict, project) or None when BigQuery isn't set up."""
     if cfg is None:
-        cfg = configparser.ConfigParser()
+        cfg = configparser.ConfigParser(strict=False)
         cfg.read(os.path.join(db.ROOT, "config.ini"), encoding="utf-8")
     if not cfg.has_section("bigquery"):
         return None
