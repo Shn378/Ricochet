@@ -41,6 +41,10 @@ class Checks(unittest.TestCase):
         bad = dict(GOOD, title="Fire at former Nazi guest house in Berchtesgaden")
         self.assertIn("title not attributed", explain.check(bad, self.refs, H))
 
+    def test_reported_needs_a_news_report(self):   # Gemini's real title for a GDELT-only square, 24 Oct
+        bad = dict(GOOD, title="Reported: GDELT signals indicate activity in Clermont-Ferrand")
+        self.assertIn('must start "Unverified"', explain.check(bad, self.refs, H))
+
     def test_made_up_citation_rejected(self):
         self.assertIn("don't exist: S7", explain.check(dict(GOOD, summary="Reports say so [S7]."), self.refs, H))
 

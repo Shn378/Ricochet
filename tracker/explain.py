@@ -145,6 +145,8 @@ def check(answer, refs, h):
             return f"missing {k}"
     if not _TITLE_OK.match(answer["title"]):
         return "title not attributed (must start Reported/Reports/Unverified)"
+    if not any(r["source"] == "news" for r in refs.values()) and not answer["title"].strip().lower().startswith("unverified"):
+        return 'no news report among the signals, so the title must start "Unverified"'
     if len(answer["title"]) > 110:
         return "title too long"
     text = json.dumps(answer, ensure_ascii=False)
