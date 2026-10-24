@@ -17,7 +17,7 @@ def feed(obs, exp=0.0, z=None, elevated=False, has_baseline=True, **kw):
 class FlagRules(unittest.TestCase):
     def test_flags_live_set(self):
         # Switched on 24 Oct with Shane's approval; the rest stay off until benchmarked and approved
-        self.assertEqual({k for k, v in rules.FLAGS.items() if v}, {"quake_strict", "severity"})
+        self.assertEqual({k for k, v in rules.FLAGS.items() if v}, {"quake_strict", "severity", "na_admin_no_open"})
 
     def test_pair_signal(self):
         f = {"gdelt": feed(3.5, 1.0), "news": feed(3.5, 1.0)}

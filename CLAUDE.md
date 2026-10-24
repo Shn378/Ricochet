@@ -86,8 +86,8 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   z = (obs−exp)/sqrt(exp+1); elevated = z≥3 and ratio≥2 (FIRMS 4). Fixed rules when no baseline.
 - `tracker/rules.py`: `evaluate()` is the one decision path for the live globe, replay and the
   benchmark (feeds vs normal, `decide()`, expected-event hold). `FLAGS` switch proposed rule changes
-  on/off (pair_signal, national_no_open, quake_strict, severity, listed_conflicts, median_baseline);
-  quake_strict and severity are live (24 Oct), the rest off.
+  on/off (pair_signal, national_no_open, quake_strict, severity, listed_conflicts, median_baseline,
+  na_admin_no_open); quake_strict, severity and na_admin_no_open are live (24 Oct), the rest off.
   `decide()`: Reported = two feeds *above their
   own normal* (`above_normal`), one well above. Fires alone count only near an
   ongoing/escalating country, and a lone seismic event only near one, at a site, or if it

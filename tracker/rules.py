@@ -17,7 +17,7 @@ FLAGS = {
     "severity": True,           # live 24 Oct (Shane): +2 hits, +21 openings. A report of 10+ killed counts whatever the baseline
     "listed_conflicts": False,  # hand-kept list of wars (conflicts.py) counts as "in conflict"
     "median_baseline": False,   # normal level = median day over 4 weeks, not the average
-    "na_admin_no_open": False,  # US/Canada GDELT reports placed only at a state/province or county can't open a hotspot alone
+    "na_admin_no_open": True,   # live 24 Oct (Shane, audit proposal 1): 16 fewer openings in 3 days, 0 hits lost. US/Canada GDELT reports placed only at a state/province or county can't open a hotspot alone
 }
 
 PHYSICAL = {"firms", "wiki"}   # signals the sensitive-site rule can lift
