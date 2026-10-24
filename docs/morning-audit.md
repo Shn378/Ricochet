@@ -1,88 +1,66 @@
 Ricochet morning audit (runs daily 05:45 UK time)
 
+_Copy of the scheduled task "Nightly Audit Report" (updated 24 Oct). Change both together._
+
 Context: Ricochet (ricochet.watch) is Shane's global conflict/incident tracker.
 Read CLAUDE.md in the GitHub repo Shn378/Ricochet first: it has the principles,
-code map, current rules and backlog. You can't push to the repo: Shane pastes this
-report into the Ricochet project session, where Claude applies the safe repairs.
+code map, current rules and backlog. The repo should be attached to this task;
+if git refuses access, don't work around it: put the repairs in the
+"For Claude to apply" block instead.
 Public API: /api/hotspots?hours=24&watch=1, /api/signals?hours=24[&feed=x|&cell=lat:lon],
-/api/health, /api/sources, /api/situations?all=1.
+/api/health, /api/sources, /api/situations?all=1, /api/audit, /api/benchmark (?detail=1).
 Use feed=, never source= (the fetch tool strips "source"). Add a unique
 ?v=<timestamp> to every request so cached copies aren't used.
 Write results to the "Ricochet — Project Brief" doc
-(https://claude.ai/artifact/X5uv6z76RkorKDt2tHbXwS), Replay log section; if it can't
-be reached, write a dated doc in the Ricochet project and say so at the top.
+(https://claude.ai/artifact/X5uv6z76RkorKDt2tHbXwS), Replay log section, newest audit
+first; if it can't be reached, write a dated doc in the Ricochet project and say so at the top.
 Read the previous scorecards, benchmark list and candidate-sources table there first.
 
-1. Build the "truth list": the previous UTC day's genuine security incidents
-   (attacks, strikes, explosions, riots, shootings, major outages, coups,
-   significant military moves, major disasters hitting people). Sources:
-   Wikipedia "Portal:Current events" for that date, ReliefWeb flash updates,
-   major wire coverage, and a second independent incident record if reachable.
-   Skip sport, politics without violence, routine crime. Say which sources you
-   could and couldn't reach.
+1. Truth list: the previous UTC day's genuine security incidents (attacks, strikes,
+   explosions, riots, shootings, major outages, coups, significant military moves,
+   major disasters hitting people). Sources: Wikipedia "Portal:Current events", ReliefWeb
+   (RSS; the API needs an approved app name), major wire coverage, and a second
+   independent incident record if reachable. Skip sport, politics without violence,
+   routine crime. Say which sources you could and couldn't reach.
 
-2. For each incident: did Ricochet show it? Record first signal time,
-   level (signal/reported/watch), which feed fired first, and lead time
-   vs the first public report. If missed, give the most likely reason
-   (feed gap, wrong placement, rule held it back, below baseline).
-   Add every truth-list incident (place, coordinates, UTC time window, first
-   public report) to the running "benchmark" list in the brief, for replay tests.
+2. For each incident: first signal time, level, first feed, lead time vs the first public
+   report; if missed, the likely reason (feed gap, wrong placement, rule held it back,
+   below baseline). Note feeds whose timestamps run ahead of when we received the item
+   (Ukrainska Pravda EN). Add every incident to the brief's benchmark list AND to
+   docs/benchmark.json (same shape as existing entries).
 
-3. Reverse check: list every hotspot from the last 24h and judge it
-   real / noise / unclear, with a one-line reason for noise
-   (e.g. sport coded as fighting, routine burn, mis-geocoding).
+3. Reverse check: every hotspot from the last 24h judged real / noise / unclear,
+   one-line reason for noise.
 
-3b. Source archaeology. For each incident on the truth list (caught or
-    missed), trace the earliest public trace you can find: first outlet,
-    official/police/military account, Telegram channel, Wikipedia edit,
-    sensor feed, airport or NOTAM notice, etc. Record:
-    - the source, its time, and the gap to Ricochet's first signal
-    - whether Ricochet already monitors it
-    - if not: can it be read automatically (RSS, public API, public web
-      page)? Is it free? Do its terms allow automated reading?
-    - if it's on a platform we can't read (X, closed groups), say so.
+3b. Source archaeology: earliest public trace per incident; whether we monitor it; whether
+    it's readable automatically, free and allowed by its terms; platforms we can't read.
+    Log candidates in the brief's "candidate sources" table with a tally of firsts.
+    Anything first once and readable within its terms can be proposed for PROBATION
+    ("probation": true in backbone.json). After 4 weeks, propose keep / extend / retire.
+    Probation from 24 Oct: Arab News, LBCI, Ukrainska Pravda (UA), Kyiv Independent.
+    Never propose ways around anti-bot blocks or access restrictions.
 
-    Log every candidate in the running "candidate sources" table in the
-    brief, with a tally of how often it was first. No threshold for logging.
+4. Maintenance. Start with /api/audit (server check at 04:xx UTC; it auto-retires feeds
+   refusing us with 403/429 for 3+ days and lists them under for_claude: remove those from
+   tracker/backbone.json). Then /api/health and /api/sources: failing, dead, quiet, silent,
+   rate-limited feeds; baselines learning; collector errors. Check each entry in
+   tracker/threat_levels.json against its official page.
+   SAFE REPAIRS you may push (tests must pass; commit as Claude <noreply@anthropic.com>):
+   retire a feed failing/dead 3+ days; update a feed address after confirming the new one
+   returns a valid feed; remove a duplicate; add the day's incidents to docs/benchmark.json;
+   a confirmed threat-level change. Never work around 403s, change rules, thresholds,
+   scoring, trust, keys or config: propose those. Server diagnosis = a one-line SSH command
+   for Shane.
 
-    Anything first even once and readable within its terms can be
-    proposed as a PROBATION feed (backbone.json "probation": true: shown on
-    cards, tallied, never raises a hotspot alone). After 4 weeks on
-    probation, propose keeping, extending or retiring it, based on its
-    tally of firsts and its noise.
+4b. Benchmark: from /api/benchmark report current hits, Reported count, median lead, and per
+    switch still off: hits gained/lost, extra openings. A switch with hits gained, none lost
+    and zero extra openings may be switched on as a safe repair; trade-offs go to Shane with
+    3-5 extra openings judged real/noise.
 
-    Never propose ways around a site's anti-bot blocks or access
-    restrictions.
+5. Scorecard: hits, misses, false alarms, median lead time, feed issues, up to 3 proposals
+   with evidence, each labelled general improvement / conditional / overfitting risk.
 
-4. Maintenance. Read /api/audit first (the server's own daily feed and collector check, run
-   at 04:xx UTC; it auto-retires feeds refusing us with 403/429 for 3+ days and lists them
-   under for_claude). Then check /api/health and /api/sources:
-   - feeds failing, dead, quiet over 1 hour, silent for weeks, or rate-limited
-   - baselines still learning, collector errors visible publicly
-   - threat levels: check each entry in tracker/threat_levels.json against its official
-     page; a change is a safe repair (give the new level, its meaning and the page date)
-   SAFE REPAIRS (list each under "For Claude to apply" in the report, with the
-   exact feed name and URL; Claude applies them without asking Shane):
-   - retire a feed that has been failing or dead for 3+ days
-   - update a feed to a new address, only after confirming the new
-     address returns a valid feed
-   - remove a duplicate feed
-   Never: work around anti-bot blocks or 403s, change rules, thresholds,
-   scoring or source trust, or touch keys and config. Propose those
-   instead. If diagnosis needs the server, give Shane the exact one-line
-   SSH command to run.
+6. End with a "For Claude to apply" block for anything you couldn't push (exact feed name,
+   URL and evidence). Everything else is a proposal for Shane.
 
-5. Write the scorecard: hits, misses, false alarms, median lead time,
-   feed issues, and up to 3 proposed rule or source changes with evidence.
-   Label each proposal: general improvement / conditional (one region,
-   source or event type) / overfitting risk (explains one incident only).
-
-6. End with a "For Claude to apply" block: the safe repairs from step 4 and any
-   probation candidates, each with the exact feed URL you confirmed returns a
-   valid feed today (Claude's session often can't fetch sites to check).
-   A feed returning 403 or 429 on every check for 3+ days is retired, never
-   worked around. Everything else is a proposal for Shane to approve. If something needs a look inside the
-   server, list the exact one-line command for Shane to run in the VM's
-   SSH window.
-
-Keep it short: Shane reads it over the morning kettle.
+Shane reads it over the morning coffee: lead with the scorecard, short, UK English.
