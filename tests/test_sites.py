@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import helpers  # noqa: E402  (temp folders cleaned up after the run)
 
 from tracker import db, rules, sites  # noqa: E402
 from tracker.collectors import firms, wiki  # noqa: E402
@@ -16,7 +17,7 @@ def feed(z, elevated, baseline=True):
 
 class Sites(unittest.TestCase):
     def setUp(self):
-        d = tempfile.mkdtemp()
+        d = helpers.tmpdir()
         db.DATA, db.DB_PATH, db.RAW_DIR = d, d + "/t.db", d + "/raw"
         self.con = db.connect()
         self.con.executescript(sites.SCHEMA)

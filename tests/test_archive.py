@@ -8,6 +8,7 @@ import time
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import helpers  # noqa: E402  (temp folders cleaned up after the run)
 from tracker import archive, db
 
 AK, SK = "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
@@ -31,7 +32,7 @@ class SigV4(unittest.TestCase):
 
 class Digest(unittest.TestCase):
     def test_day_digest_and_upload(self):
-        d = tempfile.mkdtemp()
+        d = helpers.tmpdir()
         db.DATA, db.DB_PATH, db.RAW_DIR = d, d + "/t.db", d + "/raw"
         archive.HOTSPOT_DIR = os.path.join(d, "hotspots")
         con = db.connect()

@@ -7,6 +7,7 @@ import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import helpers  # noqa: E402  (temp folders cleaned up after the run)
 
 from tracker import attention, db  # noqa: E402
 from tracker.collectors import news  # noqa: E402
@@ -58,7 +59,7 @@ class Feeds(unittest.TestCase):
 
 class Budget(unittest.TestCase):
     def setUp(self):
-        d = tempfile.mkdtemp()
+        d = helpers.tmpdir()
         db.DATA, db.DB_PATH, db.RAW_DIR = d, d + "/t.db", d + "/raw"
         cfg = configparser.ConfigParser()
         cfg.read_dict({"news": {"budget_per_min": "6", "quiet_minutes": "30", "hot_minutes": "2", "world_desk_minutes": "5"}})

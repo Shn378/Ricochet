@@ -6,6 +6,7 @@ import time
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import helpers  # noqa: E402  (temp folders cleaned up after the run)
 from tracker import baseline, benchmark, conflicts, db, rules, server
 
 
@@ -92,7 +93,7 @@ class FlagRules(unittest.TestCase):
 
 class Store(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp()
+        self.tmp = helpers.tmpdir()
         db.DATA, db.DB_PATH, db.RAW_DIR = self.tmp, os.path.join(self.tmp, "t.db"), os.path.join(self.tmp, "raw")
         self.con = db.connect()
 
