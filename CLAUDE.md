@@ -36,7 +36,7 @@ budget around a gym membership (suggested hard cap £2/day). Keep costs visible.
 | Code | GitHub `Shn378/Ricochet` (private). `main` deploys automatically. |
 | Server | Google Cloud VM `ricochet-us`, e2-micro, us-central1-a (free tier), Debian 13, user shaneellis19, repo at ~/ricochet. Moved 23 Oct from `ricochet` (europe-west2-c, now stopped as a fallback; delete after ~30 Oct). |
 | Public site | Cloudflare Tunnel → `ricochet.watch` (domain on Cloudflare, ~$34/yr) |
-| Secrets | `~/ricochet/config.ini` on the VM only (FIRMS map key, Cloudflare Radar token, aisstream key, R2 bucket key). Never in git, never repeated in chat. |
+| Secrets | `~/ricochet/config.ini` on the VM only (FIRMS map key, Cloudflare Radar token, aisstream key, R2 bucket key, BigQuery key file `bq-key.json`). Never in git, never repeated in chat. |
 | Project brief | Claude Docs: "Ricochet — Project Brief" (concept, sourcing, lifecycle, evidence standards, positioning, replay log) |
 | Old laptop copy | HP laptop `C:\Users\shane\Desktop\Ricochet\ricochet` (pre-cloud, legacy; Windows start scripts removed 23 Oct) |
 
@@ -97,7 +97,10 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
 - `tracker/known_events.py`: calendar of expected events; the note follows the hotspot's lead feed.
 - `tracker/server.py`: hotspots (confidence 0-100 orders the tour), API.
 - `tracker/situations.py`: country-level Ongoing/Escalating from GDELT conflict share.
-- `tracker/replay.py`: rebuilds a past incident's signals and simulates the live rules.
+- `tracker/replay.py`: rebuilds a past incident's signals and simulates the live rules (GDELT via BigQuery when
+  set up, else GDELT's 15-minute files).
+- `tracker/bq.py`: read-only BigQuery (service-account key `bq-key.json` on the VM, `[bigquery]` in config.ini;
+  stdlib RS256). Every query is capped at 3 GB (free tier: 1 TiB/month). `python3 -m tracker.bq check`.
 - `tracker/benchmark.py`: replays every audited incident (`docs/benchmark.json`, frozen evidence in
   `data/benchmark/`) plus the last 3 days of live traffic under each `FLAGS` variant. Runs on the
   server after each deploy and daily; results at `/api/benchmark` (`?detail=1` per incident).

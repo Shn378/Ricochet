@@ -129,12 +129,25 @@ def run(lat, lon, start, end, wiki_titles=(), keywords=(), log=print, firms_key=
     slot = datetime.fromtimestamp(start, timezone.utc).replace(second=0, microsecond=0)
     slot = slot.replace(minute=slot.minute - slot.minute % 15)
     found, n = [], 0
+    # One BigQuery query for the whole window when it's set up (no zip downloads from GDELT)
+    from_bq = None
+    try:
+        from . import bq
+        if bq.settings():
+            from_bq = bq.gdelt_signals(int(slot.timestamp()), end)
+            report["notes"].append(f"GDELT from BigQuery ({sum(map(len, from_bq.values()))} conflict events)")
+    except Exception as e:
+        report["notes"].append(f"BigQuery failed, using GDELT's 15-minute files: {e}")
+        from_bq = None
     while slot.timestamp() <= end:
-        try:
-            sigs, counts = gdelt.fetch_slot(slot)
-        except Exception as e:
-            report["notes"].append(f"GDELT {slot:%H:%M} failed: {e}")
-            sigs = []
+        if from_bq is not None:
+            sigs = from_bq.get(int(slot.timestamp()), [])
+        else:
+            try:
+                sigs, counts = gdelt.fetch_slot(slot)
+            except Exception as e:
+                report["notes"].append(f"GDELT {slot:%H:%M} failed: {e}")
+                sigs = []
         for s in sigs:
             near = km(lat, lon, s["lat"], s["lon"]) <= RADIUS_KM
             kw = any(k in (s.get("url") or "").lower() or k in (s.get("place") or "").lower() for k in keywords)
