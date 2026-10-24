@@ -92,7 +92,8 @@ M4+ abroad, so most places look quiet), so EMSC would help.
 Suggested order: quick wins first (UK alerts, tsunami, threat levels), then Ukraine alerts
 once the token arrives; terms of use drafted alongside.
 
-- **Terms of use.** Disclaimer (not for life-safety decisions; nothing confirmed unless the
+- **Terms of use.** Licence audit done 24 Oct: `docs/licences.md` (adsb.fi and Cloudflare Radar are
+  non-commercial; IODA, aisstream, Met Office and news RSS terms still to confirm). Disclaimer (not for life-safety decisions; nothing confirmed unless the
   card says so; follow official warnings), data credits and licences, short privacy note.
   Licence audit first: adsb.fi is non-commercial only, so aircraft data must stay free-tier or
   get a commercial deal before paid alerts; check aisstream, FIRMS, GDELT, Radar terms too.
