@@ -371,19 +371,22 @@ const featureFor = c => c._f !== undefined ? c._f : (c._f = countryFeats.find(f 
 const confWord = c => c >= 60 ? 'High' : c >= 30 ? 'Medium' : 'Low';
 const hzLevel = s => (s.extra && s.extra.alert) || '';
 // GDACS red and tsunami warnings get the swirl; GDACS orange (droughts, slow floods) is a small dot
-const majorHazard = s => /gdacs_red|tsunami_(warning|threat|advisory|watch)/.test(s.kind) || (s.kind === 'met_warning' && /red|amber/.test(hzLevel(s)));
+const majorHazard = s => /gdacs_red|tsunami_(warning|threat|advisory|watch)/.test(s.kind) || (s.kind === 'met_warning' && hzLevel(s) === 'red');
+// Weather is context: one small dot per warning region on the globe, however many warnings it has
+const globeHazards = () => { const seen = new Set(); return hazards.filter(s => { if (s.kind !== 'met_warning' || majorHazard(s)) return true; const k = s.place; if (seen.has(k)) return false; seen.add(k); return true; }); };
 
 function buildStops() {
   stops = [...hotspots.slice(0, 12).map(x => Object.assign(x, { type: 'hotspot', key: x.cell })),
            ...situations.slice(0, 6).map(x => Object.assign(x, { type: 'ongoing', key: 'c:' + x.country }))];
   if (focus) { const i = stops.findIndex(x => x.key === focus.key); if (i >= 0) { tourIdx = i; focus = stops[i]; } }
+  // Stops just arrived while the globe was idling: go to the first one now, not after the idle spin
+  if (!focus && stops.length && !manual) phaseEnd = Math.min(phaseEnd, performance.now() + 300);
 }
 async function refresh() {
   // Each part shows as soon as it arrives: hotspots first (the tour), then the rest
   const parts = [
     getJSON('/api/hotspots?hours=6&watch=1').then(h => {
       hotspots = h.hotspots.filter(x => x.level !== 'watch'); watching = h.hotspots.filter(x => x.level === 'watch'); loaded = true;
-      if (!stops.length) phaseEnd = performance.now() + 300;   // start the tour straight away
     }),
     getJSON('/api/situations').then(o => { situations = o.countries || []; worldShare = o.world_share; listed = o.listed || []; }),
     getJSON('/api/signals?hours=6&lite=1').then(s => { signals = s.signals.filter(x => x.source !== 'hazard'); }),
@@ -471,7 +474,7 @@ function situationCard(s, full) {
 }
 function renderCard() {
   renderControls();
-  const empty = !loaded ? `<h2 style="font-size:32px">Loading…</h2><p class="note">Contacting the Tripwire engine.</p>` : `<h2 style="font-size:32px">Nothing above normal right now</h2><p class="note">A hotspot opens when an area runs well above its normal level: two feeds active with at least one spiking, or one feed spiking hard on its own. The globe keeps spinning until then.</p>`;
+  const empty = (!loaded || stops.length) ? `<h2 style="font-size:32px">Loading…</h2><p class="note">Contacting the Tripwire engine.</p>` : `<h2 style="font-size:32px">Nothing above normal right now</h2><p class="note">A hotspot opens when an area runs well above its normal level: two feeds active with at least one spiking, or one feed spiking hard on its own. The globe keeps spinning until then.</p>`;
   const html = full => !focus ? empty : focus.type === 'ongoing' ? situationCard(focus, full) : hotspotCard(focus, full);
   if (MODE === 'phone') {
     $('cardP').innerHTML = html(sheetOpen) + (focus ? `<div class="sheet-hint">${sheetOpen ? '⌄ Push down to collapse' : `⌃ Pull up for ${focus.type === 'ongoing' ? 'latest reports' : (focus.count || '') + ' signals and sources'} · swipe for next`}</div>` : '');
@@ -705,7 +708,7 @@ function draw(t) {
   for (const s of signals) { if (s.lat == null || !vis([s.lon, s.lat])) continue; const [x, y] = projection([s.lon, s.lat]);
     const faint = s.kind === 'military_air' || s.source === 'firms'; ctx.beginPath(); ctx.arc(x, y, faint ? 1.8 : 3, 0, 7);
     ctx.fillStyle = SCOL(s.source); ctx.globalAlpha = faint ? .4 : .9; ctx.fill(); ctx.globalAlpha = 1; }
-  for (const s of hazards) { if (s.lat == null || !vis([s.lon, s.lat])) continue; const [x, y] = projection([s.lon, s.lat]);
+  for (const s of globeHazards()) { if (s.lat == null || !vis([s.lon, s.lat])) continue; const [x, y] = projection([s.lon, s.lat]);
     if (majorHazard(s)) { swirl(x, y, MODE === 'phone' ? 10 : 13, t); if (MODE !== 'phone' && !s.kind.startsWith('met')) label(x + 18, y - 2, (s.place || 'hazard').slice(0, 18), `${(s.extra && s.extra.hazard) || ''} · ${hzLevel(s)}`, PAL.hz, false, 3); }
     else { ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fillStyle = PAL.hz; ctx.globalAlpha = .7; ctx.fill(); ctx.globalAlpha = 1; } }
   for (const h of hotspots) { if (!vis([h.lon, h.lat])) continue;
