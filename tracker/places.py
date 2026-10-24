@@ -41,6 +41,30 @@ for names, lat, lon, cc, pop in _G["cities"]:
         if len(k) >= 4 and k not in STOP:
             _INDEX.setdefault(k, []).append((lat, lon, cc, pop, names[0], j == 0))
 _MAXWORDS = 3
+# Ukrainian names missing from the gazetteer (it has the Russian forms)
+for _uk, _en in {"київ": "Kyiv", "дніпро": "Dnipro", "львів": "Lviv"}.items():
+    for _row in _INDEX.get(_en.lower(), []):
+        if _row[2] == "UA":
+            _INDEX.setdefault(_uk, []).append(_row)
+_UK_ENDINGS = ("ові", "ами", "ями", "ах", "ях", "ом", "ем", "ою", "ею", "у", "ю", "а", "я", "і", "и", "е", "ї")
+_UK_ALT = {"о": "і", "е": "і", "є": "ї"}   # Харкова -> Харків, Чернігова -> Чернігів, Миколаєва -> Миколаїв
+
+
+def _uk_forms(word):
+    """Dictionary forms a Ukrainian (Cyrillic) word might be: "Харкову" -> "харків", "Сумах" -> "суми"."""
+    w = word.lower()
+    if not any("\u0400" <= c <= "\u04ff" for c in w):
+        return ()
+    out = []
+    for end in _UK_ENDINGS:
+        if w.endswith(end) and len(w) - len(end) >= 3:
+            stem = w[:-len(end)]
+            out += [stem, stem + "и", stem + "а", stem + "я", stem + "ь"]
+            if stem[-2:-1] in _UK_ALT:
+                out.append(stem[:-2] + _UK_ALT[stem[-2]] + stem[-1])
+    if w == "києва" or w.startswith("києв"):
+        out.append("київ")
+    return out
 
 _COUNTRY_NAMES = {}
 _PLACE_WORDS = set()     # words that name a place, not a people, party or leader
@@ -49,7 +73,9 @@ for iso, c in COUNTRIES.items():
     _PLACE_WORDS.add(c["name"].lower())
 _PLACE_WORDS |= {"uk", "britain", "england", "scotland", "wales", "northern ireland", "us", "usa", "america",
                  "united states", "russia", "syria", "iran", "turkey", "türkiye", "taiwan", "south korea", "north korea",
-                 "gaza", "west bank", "palestine", "myanmar", "drc", "congo", "ivory coast"}
+                 "gaza", "west bank", "palestine", "myanmar", "drc", "congo", "ivory coast",
+                 "росія", "росії", "росією", "україна", "україні", "україни", "іран", "ірані", "ірану", "ізраїль", "ізраїлі",
+                 "молдова", "молдові", "молдови", "білорусь", "білорусі", "крим", "криму"}
 # Other names, demonyms, and actors that pin a story to a country
 for alias, iso in {
         "uk": "GB", "britain": "GB", "british": "GB", "england": "GB", "english": "GB", "scotland": "GB", "scottish": "GB",
@@ -70,6 +96,12 @@ for alias, iso in {
         "macron": "FR", "meloni": "IT", "starmer": "GB", "albanese": "AU", "zelensky": "UA", "zelenskyy": "UA",
         "putin": "RU", "netanyahu": "IL", "erdogan": "TR", "erdoğan": "TR", "modi": "IN", "merz": "DE", "carney": "CA",
         "luxon": "NZ", "sybiha": "UA", "lula": "BR",
+        # Ukrainian (for the UP Ukrainian edition): places, then peoples/adjectives
+        "росія": "RU", "росії": "RU", "росією": "RU", "україна": "UA", "україні": "UA", "україни": "UA",
+        "іран": "IR", "ірані": "IR", "ірану": "IR", "ізраїль": "IL", "ізраїлі": "IL", "молдова": "MD", "молдові": "MD",
+        "молдови": "MD", "білорусь": "BY", "білорусі": "BY", "крим": "UA", "криму": "UA",
+        "російський": "RU", "російська": "RU", "російські": "RU", "російського": "RU", "російському": "RU",
+        "російських": "RU", "росіяни": "RU", "росіян": "RU", "іранський": "IR", "іранські": "IR",
 }.items():
     _COUNTRY_NAMES[alias] = iso
 _COUNTRY_RE = re.compile(r"(?<![\w-])(" + "|".join(sorted(map(re.escape, _COUNTRY_NAMES), key=len, reverse=True)) + r")(?![\w-])", re.I)
@@ -84,15 +116,22 @@ def country_centre(iso):
 _LOCATIVE = re.compile(r"\b(in|on|at|over|across|into|near|off|inside|from)\s+(the\s+)?$", re.I)
 
 
+# "Russian strike", "Iranian-backed forces", "російські обстріли": who did it, not where
+_ARMED = re.compile(r"^[\s-]*(\w+[\s-]+)?(strikes?|drones?|missiles?|rockets?|attacks?|shelling|forces|troops|army|"
+                    r"military|soldiers|jets|warplanes|navy|bombers?|backed|обстріл\w*|удар\w*|дрон\w*|атак\w*|ракет\w*|"
+                    r"військ\w*|окупант\w*)\b", re.I)
+
+
 def _mentions(text):
-    """(iso, is_place, after_in_on_at) per country mention, in order."""
+    """(iso, kind, after_in_on_at) per country mention, in order. kind: "place" (Moldova), "actor"
+    (Russian drones) or "people" (Australian MP)."""
     out = []
     for m in _COUNTRY_RE.finditer(text):
         word = m.group(1)
         if word.lower() == "us" and word != "US":   # "us" the pronoun, not the country
             continue
-        out.append((_COUNTRY_NAMES[word.lower()], word.lower() in _PLACE_WORDS,
-                    bool(_LOCATIVE.search(text[max(0, m.start() - 12):m.start()]))))
+        kind = "place" if word.lower() in _PLACE_WORDS else "actor" if _ARMED.match(text[m.end():m.end() + 30]) else "people"
+        out.append((_COUNTRY_NAMES[word.lower()], kind, bool(_LOCATIVE.search(text[max(0, m.start() - 12):m.start()]))))
     return out
 
 
@@ -105,14 +144,17 @@ def countries_in(text):
     return seen
 
 
-def where_country(text):
+def where_country(text, places_only=False):
     """The country a story happens in, when no town says so. "Russian drone crashes in Moldova":
     Moldova (a place, after "in"), not Russia (who did it). Order: a place after in/on/at/off...,
     then the first place named, then the first people, party or leader named."""
     ms = _mentions(text)
-    for want in (lambda p, l: p and l, lambda p, l: p, lambda p, l: True):
-        for iso, place, loc in ms:
-            if want(place, loc):
+    tests = [lambda k, l: k == "place" and l, lambda k, l: k == "place", lambda k, l: k == "people"]
+    if not places_only:
+        tests.append(lambda k, l: True)
+    for want in tests:
+        for iso, kind, loc in ms:
+            if want(kind, loc):
                 return iso
     return None
 
@@ -157,6 +199,8 @@ def find_town(text, allowed=None, world=False, named=(), main_only=False):
             if not chunk[0][:1].isupper():      # place names are capitalised in headlines
                 continue
             cands = _INDEX.get(" ".join(chunk).lower())
+            if not cands and n == 1:
+                cands = next((_INDEX[f] for f in _uk_forms(chunk[0]) if f in _INDEX), None)
             if not cands:
                 continue
             for lat, lon, cc, pop, name, main in cands:
@@ -191,7 +235,13 @@ def locate(text, feed_country=None, towns_only=False):
     town = find_town(text, allowed, world, named)
     if town:
         return town
-    about = feed_country if feed_country in named else (where_country(text) or feed_country)
+    # A national feed's story that names only who did it ("Russian strikes overnight" on a Ukrainian
+    # desk) happens at home; one that names another place ("...in Moldova") happens there
+    placed_abroad = where_country(text, places_only=True)
+    if feed_country in named or (feed_country and not placed_abroad):
+        about = feed_country
+    else:
+        about = placed_abroad or where_country(text) or feed_country
     spot = find_named(text, allowed, about)
     if spot or towns_only:
         return spot

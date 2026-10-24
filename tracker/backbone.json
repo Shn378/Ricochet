@@ -273,6 +273,20 @@
    "country": "LB",
    "lang": "en",
    "probation": true
+  },
+  {
+   "name": "Ukrainska Pravda (UA)",
+   "url": "https://www.pravda.com.ua/rss/",
+   "country": "UA",
+   "lang": "uk",
+   "probation": true
+  },
+  {
+   "name": "Kyiv Independent",
+   "url": "https://kyivindependent.com/news-archive/rss/",
+   "country": "UA",
+   "lang": "en",
+   "probation": true
   }
  ]
 }

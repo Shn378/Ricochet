@@ -79,7 +79,7 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
     shown in lime, never counted. GOV.UK alerts parser written but not polled: placement not good enough)
   - `news` (RSS/Atom via the attention budget)
 - `tracker/attention.py`: news "attention budget": 30 checks/min shared by heat.
-  Backbone in `tracker/backbone.json` (48 feeds incl. Arab News + LBCI on probation from 24 Oct; Al Arabiya EN retired 22 Oct after 403s on probation). Layer 2 backbone, 3 leased (not built),
+  Backbone in `tracker/backbone.json` (50 feeds incl. Arab News, LBCI, Ukrainska Pravda (UA) and Kyiv Independent on probation from 24 Oct; Al Arabiya EN retired 22 Oct after 403s on probation). Layer 2 backbone, 3 leased (not built),
   4 earned (not built), **5 probation** (`"probation": true`: shown on cards/map, tallied,
   never counts towards a hotspot). Feeds removed from the JSON are marked retired.
 - `tracker/baseline.py`: hourly buckets per 1° cell; same-hours-of-day expectations;
@@ -106,7 +106,11 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   us (403/429) for 3+ days via `data/auto_retired.json` and lists them under `for_claude` to drop from backbone.json.
 - `tracker/threat_levels.json`: hand-kept national threat levels on country cards (audit re-checks daily).
 - `tracker/conflicts.py`: hand-kept list of armed conflicts (optionally boxed), for `listed_conflicts`.
-- `tracker/places.py` + `gazetteer.json.gz`: placing stories (GeoNames ≥15k, demonyms, leaders).
+- `tracker/places.py` + `gazetteer.json.gz`: placing stories (GeoNames ≥15k, demonyms, leaders). Order: town >
+  named facility/sea (`named_places.json`, placement only) > country. "Where" beats "who": a place named after
+  in/on/off wins; "Russian drones" is an actor (a national feed keeps its own country); "Australian MP" is a location.
+  Ukrainian case endings handled. GDELT country-centre stories are re-placed from the article slug when it names a
+  town (main name), facility or sea in that country.
 
 ## Working method
 

@@ -23,7 +23,9 @@ INCIDENT = re.compile(r"""\b(
     lockdown|evacuat\w*|curfew|coup|mutiny|insurgent|militant|ambush|kidnap\w*|abduct\w*|
     attentat|fusillade|explosion|émeutes?|tué[es]*|blessé[es]*|poignard\w*|
     anschlag|explosion|schüsse|getötet|messerangriff|
-    ataque|explosión|tiroteo|muertos?|asesinad\w*
+    ataque|explosión|tiroteo|muertos?|asesinad\w*|
+    атак\w*|обстріл\w*|вибух\w*|удар(и|ом|ів)?|загин\w*|поранен\w*|ракет\w*|дрон\w*|шахед\w*|бпла|вбит\w*|
+    вибухівк\w*|евакуац\w*|теракт\w*
 )\b""", re.I | re.X)
 STRONG = re.compile(r"\b(terror\w*|counter-terror\w*|assassinat\w*|massacre|gunm[ae]n|opened fire|explosion|bomb(ing|ed)?|hostage|ramm(ed|ing)|air\s*strike|missile|critically injured|seriously injured|mass casualty|attentat|anschlag)\b", re.I)
 # Same words, harmless meaning
