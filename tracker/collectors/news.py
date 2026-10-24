@@ -80,6 +80,10 @@ def parse_feed(xml_bytes):
 
 def to_signals(items, feed, now):
     out = []
+    # An item we haven't seen before, stamped earlier than our last good read of this feed, wasn't in
+    # the feed then: the outlet stamps it with an earlier time (Ukrainska Pravda EN uses the Ukrainian
+    # original's). Date it to that last read, the earliest we could have known, so lead times stay honest.
+    floor = feed.get("last_ok") or 0
     for it in items:
         text = f"{it['title']}. {it['summary']}"
         if not INCIDENT.search(it["title"]) and not STRONG.search(it["summary"]):
@@ -103,7 +107,7 @@ def to_signals(items, feed, now):
             "title": f"{feed['name']}: {it['title']}"[:240],
             "url": it["link"],
             "score": score,
-            "observed_at": min(it["published"] or now, now),
+            "observed_at": min(max(it["published"] or now, floor), now),
             "extra": {"outlet": feed["name"], "layer": feed.get("layer", 2), "strong": strong},
         })
     return out

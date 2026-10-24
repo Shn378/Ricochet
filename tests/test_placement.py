@@ -34,6 +34,11 @@ class Placement(unittest.TestCase):
         self.assertIsNone(P.locate_slug("https://cedarnews.net/newstasks/1094041/convicted-madera-county-drunk-driver-returns-13/", "KE"))
         self.assertIsNone(P.locate_slug("https://www.riotimesonline.com/puerto-rico-killings-what-we-know-2026/", "PR"))
 
+    def test_late_stamp_dated_to_last_read(self):
+        item = {"title": "Explosion in Kharkiv", "summary": "", "link": "https://e.com/c", "guid": "c", "published": 1000}
+        self.assertEqual(news.to_signals([item], {"name": "UP", "country": "UA"}, 5000)[0]["observed_at"], 1000)
+        self.assertEqual(news.to_signals([item], {"name": "UP", "country": "UA", "last_ok": 4000}, 5000)[0]["observed_at"], 4000)
+
     def test_drone_crash_is_an_incident(self):
         sig = news.to_signals([{"title": "Russian drone crashes near homes and energy site in Moldova", "summary": "",
                                 "link": "https://e.com/a", "guid": "a", "published": 1}], {"name": "UP", "country": "UA"}, 100)

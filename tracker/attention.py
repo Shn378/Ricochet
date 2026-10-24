@@ -141,7 +141,7 @@ class Budget:
         now = int(time.time())
         feed = {"name": s["name"], "country": s["country"], "layer": s["layer"]}
         try:
-            raw, items, sigs, newest = news.fetch(dict(feed, url=s["url"]), now)
+            raw, items, sigs, newest = news.fetch(dict(feed, url=s["url"], last_ok=s["last_ok"]), now)
             if s["layer"] == 5:
                 # Probation: shown on cards and the map, tallied, but never counted towards a hotspot
                 for sg in sigs:
