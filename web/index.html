@@ -62,6 +62,10 @@ svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; ani
 .gl span small { color: var(--muted); font-size: inherit; }
 .gl-facts { font: 12px var(--f-mono); color: var(--muted); letter-spacing: .02em; }
 body[data-mode="wall"] .gl { font-size: 18px; }
+/* AI summary (tracker/explain.py): always labelled, every claim linked to its source */
+.ai { border-left: 2px solid var(--line); padding: 2px 0 2px 12px; display: grid; gap: 4px; }
+.ai b { font-size: 16px; } .ai p { margin: 0; } .ai a { color: inherit; }
+body[data-mode="wall"] .ai b { font-size: 20px; } body[data-mode="wall"] .ai p { font-size: 17px; }
 .pill.lvl-ongoing, .pill.lvl-escalating { color: var(--bg); background: var(--c-ongoing); border-color: var(--c-ongoing); }
 .pill.hz { color: var(--c-hazard); border-color: var(--c-hazard); }
 .pill.hz-red { color: #fff; background: #c8423b; border-color: #c8423b; }
@@ -458,6 +462,13 @@ function glanceHTML(h) {
   return `<div class="glance">${g.lines.map(l => `<div class="gl ${l.state}"><em>${icon[l.state] || '·'}</em><i style="background:${SCOL(l.feed)}"></i><span><b>${esc(l.text)}</b> <small>· ${esc(l.note)}</small></span></div>`).join('')}</div>
     <div class="gl-facts">${facts.map(esc).join(' · ')}</div>`;
 }
+// [S3] -> a link to that signal's own reporting
+const citeLinks = (text, refs) => esc(text).replace(/\[((?:S\d+(?:,\s*)?)+)\]/g, (m, ids) =>
+  '[' + ids.split(/,\s*/).map(id => refs[id] && refs[id].url ? `<a href="${esc(refs[id].url)}" target="_blank" rel="noopener" title="${esc(refs[id].title)}">${id.slice(1)}</a>` : id.slice(1)).join(', ') + ']');
+function aiHTML(h) {
+  const a = h.explain; if (!a || !a.summary) return '';
+  return `<div class="ai"><div class="label">AI summary of the reporting · ${hhmm(a.created)} · not checked by a person</div><b>${esc(a.title)}</b><p>${citeLinks(a.summary, a.refs || {})}</p></div>`;
+}
 function hotspotCard(h, full) {
   const lvl = LVL(h.level);
   const why = (h.reason || '').split(' · expected:')[0];
@@ -470,6 +481,7 @@ function hotspotCard(h, full) {
     <h2>${esc(shortName(h))}</h2>
     <div class="where">${esc(nameOf(h))} · ${Math.abs(h.lat).toFixed(2)}°${h.lat >= 0 ? 'N' : 'S'} ${Math.abs(h.lon).toFixed(2)}°${h.lon >= 0 ? 'E' : 'W'}</div>
     ${glanceHTML(h)}
+    ${aiHTML(h)}
     <div class="label why-l">Why it's here</div><p class="why">${esc(why)}</p>
     ${h.expected ? `<p class="expected"><b>Expected: ${esc(h.expected.name)}.</b> ${esc(h.expected.note)} Check before escalating.</p>` : ''}
     ${h.threat_level ? `<p class="note">${esc(h.threat_level.label)}: <b style="color:var(--fg)">${esc(h.threat_level.level)}</b> (${esc(h.threat_level.meaning)}). <a href="${esc(h.threat_level.url)}" target="_blank" rel="noopener">Official page</a></p>` : ''}

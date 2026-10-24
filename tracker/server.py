@@ -12,7 +12,7 @@ from collections import defaultdict
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import baseline, db, glance, known_events, rules, situations
+from . import baseline, db, explain, glance, known_events, rules, situations
 
 WEB = os.path.join(db.ROOT, "web")
 SOURCES = ["news", "gdelt", "ioda", "radar", "infra", "wiki", "firms", "adsb", "ais", "seismic", "hazard"]
@@ -51,13 +51,20 @@ def hotspots(con, hours=6, limit=40, watch=False):
     if not hit or time.time() - hit[0] >= 60:
         hit = (time.time(), _hotspots(con, hours, MAX_HOTSPOTS))   # one list for every caller, sliced
         _cache[key] = hit
-    return [h for h in hit[1] if watch or h["level"] != "watch"][:limit]
+    out = [h for h in hit[1] if watch or h["level"] != "watch"][:limit]
+    if explain.PUBLIC:   # AI card summaries, once they're out of preview (tracker/explain.py)
+        try:
+            ai = explain.latest(con, {h["cell"] for h in out})
+            out = [dict(h, explain=ai[h["cell"]]) if h["cell"] in ai and ai[h["cell"]]["created"] >= h["first"] else h for h in out]
+        except Exception:
+            pass
+    return out
 
 
 MAX_HOTSPOTS = 240
 MAX_HOURS = 168
 # Seconds a polled API answer is shared between visitors. /api/near is a full uncached pass.
-SHARED_CACHE = {"/api/health": 20, "/api/signals": 20, "/api/situations": 20, "/api/sources": 30, "/api/near": 60}
+SHARED_CACHE = {"/api/explanations": 30, "/api/health": 20, "/api/signals": 20, "/api/situations": 20, "/api/sources": 30, "/api/near": 60}
 _responses = {}
 
 
@@ -344,6 +351,12 @@ class Handler(SimpleHTTPRequestHandler):
                         return self._json(json.load(f))
                 except OSError:
                     return self._json({"ok": False, "message": "No audit run yet"})
+            if u.path == "/api/explanations":   # AI card summaries, kept and rejected, for the preview page
+                try:
+                    return self._json({"now": int(time.time()), "public": explain.PUBLIC, "stats": explain.stats(self.con),
+                                       "recent": explain.recent(self.con, min(int(q.get("limit", 60)), 200))})
+                except Exception:
+                    return self._json({"now": int(time.time()), "public": False, "stats": None, "recent": [], "message": "AI summaries not set up yet"})
             if u.path == "/api/health":
                 return self._json({"now": int(time.time()), "sources": health(self.con), "baseline": baseline.status(self.con)})
         except Exception as e:

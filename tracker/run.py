@@ -191,6 +191,8 @@ def main():
     threading.Thread(target=audit.runner, args=(log,), daemon=True, name="audit").start()
     from . import archive, server as srv
     threading.Thread(target=srv.warm, args=(log,), daemon=True, name="warm").start()
+    from . import explain
+    threading.Thread(target=explain.runner, args=(cfg, lambda c: srv.hotspots(c, 6, 200), log), daemon=True, name="explain").start()
     threading.Thread(target=archive.runner, args=(cfg, lambda c: srv.hotspots(c, 6, 200, watch=True), log),
                      daemon=True, name="archive").start()
     log(f"Ricochet running (Tripwire engine). Open http://localhost:{port}")

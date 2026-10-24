@@ -101,6 +101,10 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
   sources, near) share one answer between visitors for 20-60 s (`SHARED_CACHE`); `hours=` is capped at 168; `?v=` is ignored.
 - `tracker/glance.py`: the card's "at a glance" strip (`glance` on each hotspot): one plain line per feed, ▲ well above /
   ● above / ○ at normal, from the engine's own numbers (no AI); outage feeds always "cause not confirmed".
+- `tracker/explain.py`: Layer 2 AI card summaries (Gemini, `[gemini]` in config.ini). Only when a hotspot opens or changes
+  (max every 30 min per square), hard daily cap (`daily_cap_gbp`), every answer checked in code (citations exist, no
+  "confirmed", title starts Reported/Reports/Unverified, outages "cause not confirmed") or dropped. `preview = yes`:
+  answers only at `/api/explanations` and `web/preview.html` (unlisted); `preview = no` adds `explain` to the cards.
 - `tracker/situations.py`: country-level Ongoing/Escalating from GDELT conflict share.
 - `tracker/replay.py`: rebuilds a past incident's signals and simulates the live rules (GDELT via BigQuery when
   set up, else GDELT's 15-minute files).
