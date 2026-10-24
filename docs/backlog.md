@@ -52,8 +52,8 @@ Next, in order:
 3. Check the first R2 upload in the log (`grep archive`).
 4. BigQuery read-only key (walk Shane through the console: service account with BigQuery Job User
    + Data Viewer, JSON key into config.ini on the VM) for older GDELT replays and baselines.
-5. Gemini morning audit: write its prompt (based on docs/morning-audit.md) writing to a Google Doc
-   in a "Ricochet audits" Drive folder that Claude reads via the Drive connector.
+5. Gemini: decided 24 Oct (Shane) as an on-demand helper for data crunching and repetitive jobs, not a
+   scheduled audit. Repo access, branch + pull request only; job prompts in docs/gemini-jobs.md.
 6. Deterministic half of the audit as `audit.py` on the VM (feed health, auto-retire 3-day 403s).
 7. Quick-win sources: GDACS + NOAA tsunami done (context); GOV.UK alerts (placement), threat levels, Met Office context still to do.
 8. UI build (three modes, docs/ui) — biggest chunk; may slip to next weekend.
