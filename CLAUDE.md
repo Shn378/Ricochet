@@ -62,7 +62,7 @@ The workspace can also reach the live API with curl (no web-fetch quota).
 
 ## How it works (code map)
 
-Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.html`).
+Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.html`: phone default, `?mode=wall`, `?mode=stream`; previous layout at `web/old.html` / `?ui=old` until ~31 Oct).
 
 - `tracker/run.py`: config defaults, pollers, stream runners (Wikipedia, AIS), housekeeping.
 - `tracker/collectors/`: one module per feed:
@@ -105,7 +105,6 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
 - `tracker/audit.py`: daily 04:xx UTC feed/collector health at `/api/audit`; auto-retires feeds refusing
   us (403/429) for 3+ days via `data/auto_retired.json` and lists them under `for_claude` to drop from backbone.json.
 - `tracker/threat_levels.json`: hand-kept national threat levels on country cards (audit re-checks daily).
-- `web/v2.html`: new UI (docs/ui) at `?ui=new`: phone default, `&mode=wall`, `&mode=stream`. Not yet the default.
 - `tracker/conflicts.py`: hand-kept list of armed conflicts (optionally boxed), for `listed_conflicts`.
 - `tracker/places.py` + `gazetteer.json.gz`: placing stories (GeoNames ≥15k, demonyms, leaders).
 

@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ricochet (previous layout)</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0b1118; --panel: #111a24; --panel-2: #16212e; --line: #233243;
+  --fg: #dfe7ee; --muted: #8796a6; --ocean: #0f1d2b; --land: #253546; --border-c: #3a4d61;
+  --accent: #e9b44c;
+  --c-signal: #7f9bb5; --c-reported: #e9b44c;
+  --s-news: #f2e6c9; --s-gdelt: #e9b44c; --s-ioda: #b48cf2; --s-wiki: #5fb3d9; --s-firms: #ec7a3a; --s-adsb: #46b37b; --s-seismic: #7fd1c7; --s-radar: #d29df0; --s-ais: #4f8fe0; --s-infra: #e06c9f; --s-hazard: #c5d86d;
+  --ok: #46b37b; --c-ongoing: #d9785a; --warn: #e9b44c; --bad: #e5484d;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", Consolas, ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--f-body); padding: 12px 16px 20px; }
+a { color: var(--fg); text-decoration-color: var(--muted); text-underline-offset: 2px; }
+a:hover { text-decoration-color: var(--accent); }
+button { font: inherit; color: inherit; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
+.brand b { font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: .14em; text-transform: uppercase; }
+.brand b span { color: var(--accent); }
+.brand small { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.live { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--ok); color: var(--ok); padding: 2px 8px; border-radius: 3px; display: inline-flex; gap: 6px; align-items: center; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.clock { font-family: var(--f-mono); font-size: 15px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.feeds { padding: 10px 0; }
+.hsum { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; color: var(--fg); font: 13px var(--f-body); cursor: pointer; }
+.hsum > i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.hsum b { font-weight: 600; white-space: nowrap; }
+.hsum small { color: var(--muted); font: 11px var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.hsum .chev { color: var(--muted); transition: transform .2s; flex: none; }
+.hsum[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.hlist { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+.hlist[hidden] { display: none; }
+.hlist .feed { cursor: pointer; color: var(--fg); font: inherit; font-size: 12px; }
+.hlist .feed.on { border-color: var(--accent); }
+.fdetail { width: 100%; display: grid; gap: 4px; }
+.fdetail:empty { display: none; }
+.hnote { width: 100%; color: var(--muted); font: 11px var(--f-mono); padding: 2px 2px 0; }
+.feed { display: inline-flex; gap: 6px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; font-size: 12px; }
+.feed i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.feed small { color: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+.main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.globe-wrap { position: relative; background: radial-gradient(circle at 50% 45%, #13243a 0%, var(--bg) 70%); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; aspect-ratio: 1 / .86; }
+canvas { width: 100%; height: 100%; display: block; }
+.credits { color: var(--muted); font: 11px var(--f-mono); line-height: 1.7; padding: 18px 0 6px; }
+.credits a { color: inherit; }
+.legend { position: absolute; top: 10px; left: 10px; font: 11px var(--f-mono); color: var(--muted); z-index: 2; }
+.legend-btn { display: flex; align-items: center; gap: 6px; background: rgba(11,17,24,.72); border: 1px solid var(--line); border-radius: 14px; padding: 5px 10px; color: var(--muted); font: 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; backdrop-filter: blur(3px); }
+.legend-btn .dots { display: flex; gap: 3px; }
+.legend-btn .dots i { width: 6px; height: 6px; }
+.legend-items { display: grid; gap: 4px; margin-top: 6px; background: rgba(11,17,24,.82); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; backdrop-filter: blur(3px); }
+.legend-items[hidden] { display: none; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; }
+.lower-third { position: absolute; left: 16px; right: 16px; bottom: 14px; pointer-events: none; }
+.lt-place { font-family: var(--f-display); font-weight: 600; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.lt-head { font-family: var(--f-display); font-weight: 600; font-size: clamp(20px, 2.8vw, 30px); line-height: 1.05; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.card h2 { font-family: var(--f-display); font-size: 26px; font-weight: 600; line-height: 1.1; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font: 11px var(--f-mono); text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 3px; border: 1px solid currentColor; }
+.pill.solid { color: var(--bg); border-color: transparent; font-weight: 500; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.sec-label { font: 10.5px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.sig { display: grid; grid-template-columns: 50px 10px 1fr; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.sig:last-child { border-bottom: 0; }
+.sig time { font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sig i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.sig span { min-width: 0; overflow-wrap: anywhere; }
+.queue { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
+.chip.on { border-color: var(--accent); }
+.conf { margin-left: auto; font: 11px var(--f-mono); color: var(--muted); letter-spacing: .04em; align-self: center; }
+.intro { position: fixed; inset: 0; z-index: 40; background: rgba(5,9,14,.72); display: grid; place-items: center; padding: 16px; }
+.intro[hidden] { display: none; }
+.intro-card { max-width: 520px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 12px; }
+.intro-card h2 { font-family: var(--f-display); font-size: 26px; margin: 0; }
+.intro-card p, .intro-card li { font-size: 14px; line-height: 1.5; margin: 0; }
+.intro-card ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.intro-check { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.intro-ok { justify-self: end; background: var(--accent); color: #111; border: 0; border-radius: 6px; padding: 9px 18px; font: 600 14px var(--f-body); cursor: pointer; }
+.help { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 50%; width: 26px; height: 26px; font: 600 13px var(--f-body); cursor: pointer; }
+.expected { margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent); background: var(--panel-2); font-size: 13px; color: var(--fg); }
+.nav { display: flex; align-items: center; gap: 8px; margin: -4px 0 -2px; }
+.nav .nb { width: 40px; height: 34px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer; }
+.nav .pos { font: 12px var(--f-mono); color: var(--muted); min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+.nav .mode { margin-left: auto; height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 12px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.nav .mode.paused { color: var(--accent); border-color: var(--accent); }
+.prog { height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: -6px; }
+.prog i { display: block; height: 100%; width: 0; background: var(--accent); }
+.card { touch-action: pan-y; }
+.card.in-r { animation: inR .28s ease-out; } .card.in-l { animation: inL .28s ease-out; }
+@keyframes inR { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes inL { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .card.in-r, .card.in-l { animation: none; } }
+.stream { margin-top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; }
+.stream h3 { margin: 0 0 8px; font-family: var(--f-display); font-size: 18px; letter-spacing: .08em; text-transform: uppercase; }
+.empty { color: var(--muted); }
+.spark { width: 100%; height: 64px; display: block; }
+.stat { font-size: 14px; margin: 0; max-width: 62ch; }
+.stat b { font-weight: 600; }
+.brand-row { display: flex; align-items: center; gap: 10px; }
+svg.o { display: inline-block; width: .7em; height: .7em; vertical-align: 0; margin: 0 .04em 0 .02em; overflow: visible; }
+svg.o .ping { opacity: 0; transform-box: fill-box; transform-origin: center; }
+#splash { --o-cut: #111820; }
+#splash svg.o .ping { animation: ping 2.4s ease-out 1.2s infinite; }
+@keyframes ping { 0% { opacity: .9; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(3.2); } }
+#splash { position: fixed; inset: 0; z-index: 50; background: #111820; display: grid; place-items: center; transition: opacity .7s ease; cursor: pointer; }
+#splash.gone { opacity: 0; pointer-events: none; }
+.splash-inner { width: min(92vw, 900px); display: grid; gap: 18px; justify-items: center; }
+.splash-media { position: relative; width: 100%; aspect-ratio: 1400 / 782; display: grid; place-items: center; }
+.splash-word { font: 700 clamp(48px, 11vw, 120px)/1 var(--f-display); letter-spacing: .16em; text-transform: uppercase; text-align: center; animation: logoIn 1.6s ease-out both; }
+.splash-word small { display: block; margin-top: 14px; font: 500 clamp(11px, 1.6vw, 15px) var(--f-mono); letter-spacing: .2em; color: var(--muted); }
+@keyframes logoIn { from { opacity: 0; transform: scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.splash-status { font: 12px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); min-height: 1.5em; text-align: center; }
+.splash-status b { color: var(--accent); font-weight: 500; }
+.splash-bar { width: min(60vw, 320px); height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.splash-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s ease; }
+@media (prefers-reduced-motion: reduce) { .splash-word, #splash svg.o .ping { animation: none; } }
+@media (max-width: 860px) { .main { grid-template-columns: 1fr; } .clock { margin-left: 0; } }
+@media (prefers-reduced-motion: reduce) { .live::before { animation: none; } }
+</style>
+</head>
+<body>
+<div id="splash" role="status" aria-label="Ricochet is starting">
+  <div class="splash-inner">
+    <div class="splash-media" id="splashMedia"><div class="splash-word" aria-label="Ricochet">Ric<svg class="o" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="9"/><circle class="ping" cx="51.1" cy="12.9" r="8" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="51.1" cy="12.9" r="9" fill="var(--accent)" style="stroke:var(--o-cut,#0b1118)" stroke-width="5"/></svg>chet<small>Powered by the Tripwire engine</small></div></div>
+    <div class="splash-bar"><i id="splashBar"></i></div>
+    <div class="splash-status" id="splashStatus">Starting the Tripwire engine</div>
+  </div>
+</div>
+<header class="bar">
+  <div class="brand-row"><div class="brand"><b aria-label="Ricochet">Ric<svg class="o" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-width="9"/><circle class="ping" cx="51.1" cy="12.9" r="8" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="51.1" cy="12.9" r="9" fill="var(--accent)" style="stroke:var(--o-cut,#0b1118)" stroke-width="5"/></svg>chet</b><small>Powered by the Tripwire engine</small></div></div>
+  <div class="live">Live tripwires</div>
+  <button class="help" onclick="showIntro()" aria-label="What am I looking at?" title="What am I looking at?">?</button>
+  <div class="clock" id="clock"></div>
+</header>
+<div class="feeds" id="feeds"></div>
+<div class="main">
+  <div class="globe-wrap">
+    <canvas id="globe"></canvas>
+    <div class="legend" id="legend">
+      <button class="legend-btn" aria-expanded="false" aria-controls="legendItems"><span class="dots" id="legendDots"></span>Key <span class="chev">▾</span></button>
+      <div class="legend-items" id="legendItems" hidden>
+      <span><i style="background:var(--s-news)"></i>News feeds</span>
+      <span><i style="background:var(--s-gdelt)"></i>GDELT news</span>
+      <span><i style="background:var(--s-ioda)"></i>Internet outage</span>
+      <span><i style="background:var(--s-wiki)"></i>Wikipedia</span>
+      <span><i style="background:var(--s-firms)"></i>Heat (FIRMS)</span>
+      <span><i style="background:var(--s-adsb)"></i>Aircraft</span>
+      <span><i style="background:var(--s-seismic)"></i>Seismic</span>
+      <span><i style="background:var(--s-ais)"></i>Shipping</span>
+      <span><i style="background:var(--s-infra)"></i>Infrastructure</span>
+      <span><i style="background:var(--s-hazard)"></i>Hazards (not security)</span>
+      <span><i style="background:var(--c-ongoing)"></i>Ongoing situation</span>
+      <span><i style="background:transparent;border:2px solid var(--c-reported)"></i>Hotspot: reported</span>
+      <span><i style="background:transparent;border:2px solid var(--c-signal)"></i>Hotspot: signal</span>
+      </div>
+    </div>
+    <div class="lower-third"><div class="lt-place" id="ltPlace"></div><div class="lt-head" id="ltHead"></div></div>
+  </div>
+  <section class="card" id="card"></section>
+</div>
+<section class="stream"><h3>Latest signals</h3><div id="latest"></div></section>
+<footer class="credits">Data: <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a> · <a href="https://ioda.inetintel.cc.gatech.edu/" target="_blank" rel="noopener">IODA</a> · <a href="https://radar.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Radar</a> · <a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a> · <a href="https://www.wikimedia.org/" target="_blank" rel="noopener">Wikimedia</a> · <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a> · <a href="https://www.gdacs.org/" target="_blank" rel="noopener">GDACS</a> (CC BY 4.0) · <a href="https://www.tsunami.gov/" target="_blank" rel="noopener">NOAA tsunami centres</a> · <a href="https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings" target="_blank" rel="noopener">Met Office</a> · <a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a> · aircraft from <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a> · places from <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> and <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> · news from the outlets linked in each signal</footer>
+
+<script src="vendor/d3.min.js"></script>
+<script src="vendor/topojson-client.min.js"></script>
+<script>
+const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue(k).trim();
+const SRC = { news: 'News feeds', gdelt: 'GDELT news', ioda: 'Internet outages', wiki: 'Wikipedia', firms: 'Heat (FIRMS)', adsb: 'Aircraft', seismic: 'Seismic', airspace: 'Flashpoint airspace', radar: 'Cloudflare Radar', ais: 'Shipping', infra: 'Infrastructure', hazard: 'Natural hazards & public alerts (not security incidents)' };
+const SCOLS = {}; ['news','gdelt','ioda','wiki','firms','adsb','seismic','radar','ais','infra','hazard'].forEach(s => SCOLS[s] = C('--s-' + s)); SCOLS.airspace = SCOLS.adsb;
+const SCOL = s => SCOLS[s] || '#8796a6';
+const PAL = {};
+const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const hhmm = ts => new Date(ts * 1000).toISOString().slice(11, 16);
+const ago = ts => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 60 ? m + 'm' : Math.round(m / 60) + 'h'; };
+
+
+/* ---------- Place names from the map's own country outlines ---------- */
+let countryFeats = [];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function placeName(lat, lon) {
+  if (!countryFeats.length) return `${lat.toFixed(1)}, ${lon.toFixed(1)}`;
+  const p = [lon, lat];
+  let f = countryFeats.find(c => d3.geoContains(c, p)), off = false;
+  if (!f) {
+    off = true;
+    f = countryFeats.reduce((a, c) => d3.geoDistance(p, c.c) < d3.geoDistance(p, a.c) ? c : a);
+  }
+  const name = f.properties.name;
+  if (off) return d3.geoDistance(p, f.c) > 0.15 && !countryFeats.some(c => d3.geoDistance(p, c.c) < 0.15) ? 'At sea' : `Near ${name}`;
+  const [[w, s], [e, n]] = f.b;
+  if (e < w) return name;  // straddles the date line: skip the compass part
+  const ns = lat > s + (n - s) * 2 / 3 ? 'north' : lat < s + (n - s) / 3 ? 'south' : '';
+  const ew = lon > w + (e - w) * 2 / 3 ? 'east' : lon < w + (e - w) / 3 ? 'west' : '';
+  // "Southern Sudan", never "South Sudan" (a different country)
+  const dir = ns && ew ? `${ns}-${ew}ern` : ns ? `${ns}ern` : ew ? `${ew}ern` : 'central';
+  return `${cap(dir)} ${name}`;
+}
+const nameOf = h => (h.site && h.site.name) || h.place || h._name || (h._name = placeName(h.lat, h.lon));
+
+let hotspots = [], situations = [], worldShare = null, stops = [], signals = [], focus = null, tourIdx = -1, phaseEnd = 0, cellSignals = [];
+let manual = false, lastTouch = 0, dwellTotal = 10000, slideDir = 0;
+let feedDetail = null, healthMsgs = {};
+const FEED_SOURCE = { airspace: 'adsb' };   // health entries that report into another feed's signals
+async function showFeed(k, quiet) {
+  feedDetail = k;
+  document.querySelectorAll('.hlist .feed').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  const box = document.getElementById('fdetail'); if (!box) return;
+  if (!k) { box.innerHTML = ''; return; }
+  if (!quiet) box.innerHTML = '<p class="hnote">Loading…</p>';
+  try {
+    const d = await getJSON(`/api/signals?feed=${encodeURIComponent(FEED_SOURCE[k] || k)}&hours=72&limit=12`);
+    const list = d.signals.filter(s => k !== 'airspace' || /airspace|jamming/.test(s.kind));
+    box.innerHTML = `<div class="sec-label">${esc(SRC[k] || k)} · latest (72 hours)</div>
+      <p class="hnote">${esc(healthMsgs[k] || '')}</p>` + (list.length ? list.map(s => `<div class="sig"><time>${new Date(s.observed_at * 1000).toISOString().slice(5, 16).replace('T', ' ')}Z</time><i style="background:${SCOL(s.source)}"></i><span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)}</span></div>`).join('') : '<p class="empty">Nothing from this feed in the last 72 hours.</p>');
+  } catch (e) { box.innerHTML = `<p class="empty">Couldn't load (${esc(e.message)}).</p>`; }
+}
+let healthOpen = false; try { healthOpen = !!localStorage.getItem('healthOpen'); } catch (e) {}
+const DWELL = 10000, IDLE_RESUME = 180000;   // auto tour resumes after 3 minutes without interaction
+const canvas = document.getElementById('globe'), ctx = canvas.getContext('2d');
+const projection = d3.geoOrthographic().clipAngle(90).precision(0.6), path = d3.geoPath(projection, ctx);
+const graticule = d3.geoGraticule10();
+let land, borders, W, H, base, rot = [0, -20], zoom = 1, tween = null;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function resize() {
+  const r = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  base = Math.min(W, H) * .43; projection.translate([W / 2, H * .46]);
+}
+addEventListener('resize', resize);
+
+function flyTo(lon, lat, z) {
+  let dl = (-lon - rot[0]); dl = ((dl + 540) % 360) - 180;
+  tween = { from: rot.slice(), to: [rot[0] + dl, -lat], z0: zoom, z1: z, t0: performance.now(), dur: reduce ? 1 : 1800 };
+}
+
+async function getJSON(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+async function refresh() {
+  try {
+    const [h, s, o] = await Promise.all([getJSON('/api/hotspots?hours=6'), getJSON('/api/signals?hours=6'), getJSON('/api/situations').catch(() => ({ countries: [] }))]);
+    hotspots = h.hotspots; signals = s.signals; situations = o.countries || []; worldShare = o.world_share;
+    stops = [...hotspots.slice(0, 10).map(x => Object.assign(x, { type: 'hotspot', key: x.cell })),
+             ...situations.slice(0, 8).map(x => Object.assign(x, { type: 'ongoing', key: 'c:' + x.country }))];
+    renderLatest();
+    if (focus) { const i = stops.findIndex(x => x.key === focus.key); if (i >= 0) { tourIdx = i; focus = stops[i]; await loadCell(); } renderCard(); }
+  } catch (e) { document.getElementById('latest').innerHTML = `<p class="empty">Can't reach the tracker service (${esc(e.message)}). Is it still running?</p>`; }
+}
+async function refreshHealth() {
+  try {
+    const h = await getJSON('/api/health');
+    const entries = Object.entries(h.sources);
+    const state = v => v.ok === null ? 'off' : !v.ok ? 'bad' : (v.last_ok && (h.now - v.last_ok) > 3600) ? 'stale' : 'ok';
+    const bad = entries.filter(([k, v]) => state(v) === 'bad').map(([k]) => SRC[k]);
+    const stale = entries.filter(([k, v]) => state(v) === 'stale').map(([k]) => SRC[k]);
+    const off = entries.filter(([k, v]) => state(v) === 'off').map(([k]) => SRC[k]);
+    const live = entries.length - off.length, good = live - bad.length - stale.length;
+    const b = h.baseline || {}, learning = Object.entries(b).filter(([k, v]) => !v.ready).map(([k]) => SRC[k]);
+    const dot = bad.length ? C('--bad') : stale.length ? C('--warn') : C('--ok');
+    const detail = [bad.length ? `${bad.length} failing: ${bad.join(', ')}` : '', stale.length ? `quiet: ${stale.join(', ')}` : '',
+                    learning.length ? `learning: ${learning.join(', ')}` : 'baselines ready'].filter(Boolean).join(' · ');
+    const pills = entries.map(([k, v]) => {
+      const stale = v.last_ok && (h.now - v.last_ok) > 3600;
+      const col = v.ok === null ? C('--muted') : !v.ok ? C('--bad') : stale ? C('--warn') : C('--ok');
+      const label = v.ok === null ? 'not running' : k === 'news' && v.feeds ? `${v.feeds_ok}/${v.feeds} feeds · ${v.signals_24h} in 24h` : k === 'ais' && v.ok ? `${((v.message || '').match(/\d+\/\d+ chokepoints/) || ['starting'])[0]}` : k === 'airspace' && v.ok ? `${((v.message || '').match(/\d+\/\d+ regions/) || ['starting'])[0]}` : v.ok ? `${v.signals_24h} in 24h` : 'failing';
+      return `<button class="feed${k === feedDetail ? ' on' : ''}" data-k="${k}" title="${esc(v.message)}"><i style="background:${col}"></i>${SRC[k] || k}<small>${label}</small></button>`;
+    }).join('');
+    healthMsgs = Object.fromEntries(entries.map(([k, v]) => [k, v.message]));
+    const el = document.getElementById('feeds');
+    el.innerHTML = `<button class="hsum" aria-expanded="${healthOpen}" aria-controls="hlist"><i style="background:${dot}"></i><b>${good}/${live} feeds healthy</b><small>${esc(detail)}</small><span class="chev">▾</span></button>
+      <div class="hlist" id="hlist"${healthOpen ? '' : ' hidden'}>${pills}${learning.length ? `<p class="hnote">Learning normal levels: ${learning.join(', ')}. Alerts from these use stricter fixed rules until they have a day of history.</p>` : ''}${off.length ? `<p class="hnote">Not running: ${off.join(', ')}</p>` : ''}<div class="fdetail" id="fdetail"></div></div>`;
+    el.querySelectorAll('.hlist .feed').forEach(b => b.onclick = () => showFeed(b.dataset.k === feedDetail ? null : b.dataset.k));
+    if (feedDetail) showFeed(feedDetail, true);
+    el.querySelector('.hsum').onclick = () => { healthOpen = !healthOpen; try { localStorage.setItem('healthOpen', healthOpen ? '1' : ''); } catch (e) {} refreshHealth(); };
+  } catch (e) {}
+}
+async function loadCell() {
+  cellSignals = focus.type === 'ongoing'
+    ? (await getJSON('/api/signals?hours=24&country=' + encodeURIComponent(focus.country))).signals
+    : (await getJSON('/api/signals?hours=6&cell=' + encodeURIComponent(focus.cell))).signals;
+}
+const featureFor = c => c._f !== undefined ? c._f : (c._f = countryFeats.find(f => d3.geoContains(f, [c.lon, c.lat])) || null);
+
+async function next() {
+  if (!stops.length) { focus = null; tween = { from: rot.slice(), to: [rot[0] + 20, -20], z0: zoom, z1: 1, t0: performance.now(), dur: 1500 }; renderCard(); phaseEnd = performance.now() + 15000; return; }
+  tourIdx = (tourIdx + 1) % stops.length;
+  await setFocus(stops[tourIdx], DWELL);
+}
+/* Manual navigation: any interaction pauses the tour; it picks up again after 3 idle minutes */
+function pause() { manual = true; lastTouch = performance.now(); phaseEnd = Infinity; }
+function resume() { manual = false; phaseEnd = performance.now() + 400; renderCard(); }
+function move(d) { if (!stops.length) return; pause(); slideDir = d; tourIdx = ((focus ? tourIdx : -1) + d + stops.length) % stops.length; setFocus(stops[tourIdx], DWELL); }
+function jump(i) { pause(); slideDir = i > tourIdx ? 1 : -1; tourIdx = i; setFocus(stops[i], DWELL); }
+async function setFocus(h, dwell, stay) {
+  focus = h; if (!stay) flyTo(h.lon, h.lat, h.type === 'ongoing' ? 1.35 : 1.7); dwellTotal = dwell; phaseEnd = manual ? Infinity : performance.now() + dwell;
+  try { await loadCell(); } catch (e) { cellSignals = []; }
+  renderCard();
+}
+
+function renderCard() {
+  const card = document.getElementById('card'), lp = document.getElementById('ltPlace'), lh = document.getElementById('ltHead');
+  if (!focus) {
+    lp.textContent = 'Global watch'; lh.textContent = stops.length ? 'Scanning' : 'Nothing above normal right now';
+    card.innerHTML = `<h2>Nothing above normal right now</h2><p class="note">A hotspot opens when an area runs well above its normal level: two feeds active with at least one spiking, or one feed spiking hard on its own. The globe keeps spinning until then.</p>`;
+    return;
+  }
+  const queue = `<div><div class="sec-label">On the tour</div><div class="queue">${stops.map((h, i) => `<button class="chip${h.key === focus.key ? ' on' : ''}" data-i="${i}">${h.type === 'ongoing' ? '● ' : ''}${esc((h.type === 'ongoing' ? h.name : nameOf(h)).slice(0, 28))}</button>`).join('')}</div></div>`;
+  const wireQueue = () => {
+    card.querySelectorAll('.chip').forEach(b => b.onclick = () => jump(+b.dataset.i));
+    card.querySelectorAll('.nb').forEach(b => b.onclick = () => move(+b.dataset.d));
+    const m = card.querySelector('.mode'); if (m) m.onclick = () => manual ? resume() : (pause(), renderCard());
+    if (slideDir) { card.classList.remove('in-r', 'in-l'); void card.offsetWidth; card.classList.add(slideDir > 0 ? 'in-r' : 'in-l'); slideDir = 0; }
+  };
+  const nav = `<div class="nav"><button class="nb" data-d="-1" aria-label="Previous">‹</button><span class="pos">${tourIdx + 1} / ${stops.length}</span><button class="nb" data-d="1" aria-label="Next">›</button>`
+    + `<button class="mode${manual ? ' paused' : ''}">${manual ? '▶ Resume tour' : '❚❚ Pause'}</button></div>${manual ? '' : '<div class="prog"><i id="prog"></i></div>'}`;
+  if (focus.type === 'ongoing') { renderOngoing(card, lp, lh, queue, nav); wireQueue(); return; }
+  const lvl = focus.level === 'reported' ? ['Reported', C('--c-reported')] : ['Signal', C('--c-signal')];
+  lp.textContent = nameOf(focus) + ` · ${focus.lat.toFixed(1)}, ${focus.lon.toFixed(1)}`;
+  const el = (focus.elevated || []).map(s => SRC[s].toLowerCase());
+  lh.textContent = focus.site ? `${SRC[focus.elevated[0]]} at a ${focus.site.kind}` : focus.level === 'reported' ? `${focus.sources.length} feeds active, ${el.join(' and ')} above normal` : `${SRC[focus.elevated[0]]} far above normal`;
+  const bySrc = {}; cellSignals.forEach(s => (bySrc[s.source] = bySrc[s.source] || []).push(s));
+  const sigLine = s => `<div class="sig"><time>${hhmm(s.observed_at)}Z</time><i style="background:${SCOL(s.source)}"></i><span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)}</span></div>`;
+  const items = Object.entries(bySrc).sort((a, b) => b[1].length - a[1].length).map(([src, list]) => {
+    const latest = list.slice().reverse().slice(0, 3), more = list.length - latest.length;
+    const f = (focus.feeds || {})[src] || {};
+    const norm = !f.baseline ? 'no baseline yet' : f.ratio ? `${f.ratio}× normal` : 'not usually seen here';
+    return `<div><div class="sec-label" style="color:${SCOL(src)}">${SRC[src]} · ${list.length} · ${f.elevated ? '▲ ' : ''}${norm}</div>${latest.map(sigLine).join('')}${more > 0 ? `<p class="note">+ ${more} more</p>` : ''}</div>`;
+  }).join('');
+  card.innerHTML = `${nav}
+    <div class="meta"><span class="pill solid" style="background:${lvl[1]}">${lvl[0]}</span>${focus.sources.map(s => `<span class="pill" style="color:${SCOL(s)}">${SRC[s]}</span>`).join('')}${focus.confidence != null ? `<span class="conf" title="How much attention this deserves, 0-100: level, independent feeds, how far above normal, sensitive site, expected events">Confidence ${focus.confidence >= 60 ? 'high' : focus.confidence >= 30 ? 'medium' : 'low'} · ${focus.confidence}</span>` : ''}</div>
+    <h2>${esc(nameOf(focus))}</h2>
+    ${focus.site ? `<p class="stat">Sensitive site: <b>${esc(focus.site.name)}</b> (${esc(focus.site.kind)})</p>` : ''}
+    ${focus.reason ? `<p class="stat">Why it's here: ${esc(focus.reason.split(' · expected:')[0])}</p>` : ''}
+    ${focus.threat_level ? `<p style="margin:0;font-size:12px;color:var(--muted)">${esc(focus.threat_level.label)}: <b>${esc(focus.threat_level.level)}</b> (${esc(focus.threat_level.meaning)}). <a href="${esc(focus.threat_level.url)}" target="_blank" rel="noopener">Official page</a></p>` : ''}
+    ${focus.expected ? `<p class="expected"><b>Expected: ${esc(focus.expected.name)}.</b> ${esc(focus.expected.note)} Check before escalating.</p>` : ''}
+    <p class="note">Automated tripwire signals, compared with this area's normal level. Nothing here is confirmed: no investigator agent or human review yet. First signal ${hhmm(focus.first)}Z, latest ${hhmm(focus.last)}Z, ${focus.count} signals.</p>
+    <div style="display:grid;gap:10px"><div class="sec-label">Signals here, by feed</div>${items || '<p class="empty">Loading…</p>'}</div>
+    ${queue}`;
+  wireQueue();
+}
+
+function sparkline(series, world) {
+  const w = 300, h = 64, n = series.length, bw = w / n - 6, max = Math.max(world * 2.2, ...series.filter(v => v != null)) || 1;
+  const y = v => h - 14 - (v / max) * (h - 22), days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const today = Math.floor(Date.now() / 864e5);
+  const bars = series.map((v, i) => {
+    const x = i * (w / n) + 3, label = days[new Date((today - (n - 1 - i)) * 864e5).getUTCDay()];
+    return `${v == null ? '' : `<rect x="${x}" y="${y(v)}" width="${bw}" height="${h - 14 - y(v)}" rx="2" fill="${C('--c-ongoing')}" opacity="${i === n - 1 ? 1 : .7}"><title>${label}: ${v}% of coverage</title></rect>`}
+      <text x="${x + bw / 2}" y="${h - 2}" text-anchor="middle" font-size="10" fill="${C('--muted')}" font-family="IBM Plex Mono, monospace">${label}</text>`;
+  }).join('');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Conflict share of coverage by day">${bars}
+    <line x1="0" x2="${w}" y1="${y(world)}" y2="${y(world)}" stroke="${C('--muted')}" stroke-dasharray="3 3"/>
+    <text x="${w}" y="${y(world) - 4}" text-anchor="end" font-size="10" fill="${C('--muted')}" font-family="IBM Plex Mono, monospace">world ${world}%</text></svg>`;
+}
+
+function renderOngoing(card, lp, lh, queue, nav) {
+  const s = focus, trendCol = s.trend === 'rising' ? C('--bad') : s.trend === 'easing' ? C('--ok') : C('--muted');
+  const esc8 = s.state === 'escalating';
+  lp.textContent = `${s.name} · ${esc8 ? 'escalating' : 'ongoing situation'}`;
+  lh.textContent = esc8 ? `Conflict coverage up sharply: ${s.recent}% vs ${s.earlier}% earlier in the week` : `Conflict ${s.ratio}× the world level, ${s.trend}`;
+  const sigLine = x => `<div class="sig"><time>${hhmm(x.observed_at)}Z</time><i style="background:${SCOL(x.source)}"></i><span>${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>` : esc(x.title)}</span></div>`;
+  const latest = cellSignals.slice(0, 6);
+  card.innerHTML = `${nav}
+    <div class="meta"><span class="pill solid" style="background:${esc8 ? C('--bad') : C('--c-ongoing')}">${esc8 ? 'Escalating' : 'Ongoing'}</span><span class="pill" style="color:${trendCol}">${s.trend}</span></div>
+    <h2>${esc(s.name)}</h2>
+    <p class="stat">Conflict makes up <b>${s.share}%</b> of news coverage about ${esc(s.name)} this week, <b>${s.ratio}×</b> the world average of ${worldShare}%. ${esc8 ? `Over the last two days it has been <b>${s.recent}%</b>, up from ${s.earlier}% earlier in the week.` : `Above that level on ${s.hot_days} of the last ${s.series.length} days.`}</p>
+    <div><div class="sec-label">Share of coverage that is conflict, by day</div>${sparkline(s.series.map(v => v), worldShare)}</div>
+    <div><div class="sec-label">Latest reports</div>${latest.map(sigLine).join('') || '<p class="empty">Loading…</p>'}</div>
+    <p class="note">Measured from how worldwide news is coded by GDELT. It shows sustained conflict coverage, not verified events.</p>
+    ${queue}`;
+}
+
+function renderLatest() {
+  const el = document.getElementById('latest');
+  const list = signals.filter(s => s.kind !== 'military_air').slice(0, 25);
+  el.innerHTML = list.length ? list.map(s => `<div class="sig"><time>${hhmm(s.observed_at)}Z</time><i style="background:${SCOL(s.source)}"></i><span>${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>` : esc(s.title)}</span></div>`).join('')
+    : '<p class="empty">No signals yet. The first collectors report within a few minutes of starting.</p>';
+}
+
+function draw(t) {
+  if (!PAL.ocean) Object.assign(PAL, { ocean: C('--ocean'), land: C('--land'), border: C('--border-c'), fg: C('--fg'), rep: C('--c-reported'), sig: C('--c-signal'), ongoing: C('--c-ongoing') });
+  projection.scale(base * zoom).rotate(rot);
+  ctx.clearRect(0, 0, W, H);
+  ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = PAL.ocean; ctx.fill();
+  ctx.beginPath(); path(graticule); ctx.strokeStyle = 'rgba(135,150,166,.1)'; ctx.lineWidth = .6; ctx.stroke();
+  ctx.beginPath(); path(land); ctx.fillStyle = PAL.land; ctx.fill();
+  for (const s of situations) {
+    const f = featureFor(s); if (!f) continue;
+    const on = focus && focus.key === 'c:' + s.country;
+    ctx.beginPath(); path(f); ctx.fillStyle = on ? 'rgba(217,120,90,.38)' : 'rgba(217,120,90,.16)'; ctx.fill();
+    if (on) { ctx.strokeStyle = PAL.ongoing; ctx.lineWidth = 1.4; ctx.stroke(); }
+  }
+  ctx.beginPath(); path(borders); ctx.strokeStyle = PAL.border; ctx.lineWidth = .5; ctx.stroke();
+  const centre = [-rot[0], -rot[1]], vis = p => d3.geoDistance(p, centre) < Math.PI / 2 - .03;
+  for (const s of signals) {
+    if (s.lat == null || !vis([s.lon, s.lat])) continue;
+    const [x, y] = projection([s.lon, s.lat]);
+    const faint = s.kind === 'military_air' || s.source === 'firms';
+    ctx.beginPath(); ctx.arc(x, y, faint ? 1.8 : 2.6, 0, 7);
+    ctx.fillStyle = SCOL(s.source); ctx.globalAlpha = faint ? .4 : .85; ctx.fill(); ctx.globalAlpha = 1;
+  }
+  for (const h of hotspots) {
+    if (!vis([h.lon, h.lat])) continue;
+    const [x, y] = projection([h.lon, h.lat]), col = h.level === 'reported' ? PAL.rep : PAL.sig;
+    if (!reduce) { const p = (t / 1600) % 1; ctx.beginPath(); ctx.arc(x, y, 7 + p * 20, 0, 7); ctx.strokeStyle = col; ctx.globalAlpha = 1 - p; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1; }
+    ctx.beginPath(); ctx.arc(x, y, 5.5, 0, 7); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
+    if (focus && focus.cell === h.cell) { ctx.beginPath(); ctx.arc(x, y, 12, 0, 7); ctx.strokeStyle = PAL.fg; ctx.lineWidth = 1.2; ctx.stroke(); }
+  }
+  ctx.beginPath(); path({ type: 'Sphere' }); ctx.strokeStyle = 'rgba(135,150,166,.35)'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.25, (now - last) / 1000); last = now;
+  if (tween) { const k = Math.min(1, (now - tween.t0) / tween.dur), e = d3.easeCubicInOut(k);
+    rot = [tween.from[0] + (tween.to[0] - tween.from[0]) * e, tween.from[1] + (tween.to[1] - tween.from[1]) * e]; zoom = tween.z0 + (tween.z1 - tween.z0) * e; if (k >= 1) tween = null;
+  } else if (!focus && !reduce) rot[0] += dt * 6;
+  if (manual && now - lastTouch > IDLE_RESUME) resume();
+  if (now > phaseEnd) { phaseEnd = now + 60000; next(); }
+  const pg = document.getElementById('prog'); if (pg && !manual) pg.style.width = Math.min(100, Math.max(0, 100 * (1 - (phaseEnd - now) / dwellTotal))) + '%';
+  document.getElementById('clock').textContent = new Date().toISOString().slice(11, 19) + 'Z';
+  draw(now); requestAnimationFrame(frame);
+}
+
+/* ---------- Map key: collapsed on phones, open on big screens, remembers the choice ---------- */
+(() => {
+  const btn = document.querySelector('.legend-btn'), items = document.getElementById('legendItems');
+  document.getElementById('legendDots').innerHTML = ['news', 'gdelt', 'ioda', 'firms', 'adsb', 'seismic'].map(s => `<i style="background:var(--s-${s})"></i>`).join('');
+  let open = innerWidth > 860;
+  try { const v = localStorage.getItem('legendOpen'); if (v !== null) open = v === '1'; } catch (e) {}
+  const set = o => { open = o; items.hidden = !o; btn.setAttribute('aria-expanded', o); btn.querySelector('.chev').textContent = o ? '▴' : '▾'; };
+  set(open);
+  btn.onclick = e => { e.stopPropagation(); set(!open); try { localStorage.setItem('legendOpen', open ? '1' : '0'); } catch (e) {} };
+})();
+
+/* ---------- Touch and keyboard: swipe cards, tap the globe, arrow keys ---------- */
+(() => {
+  const card = document.getElementById('card');
+  let x0 = null, y0 = 0, t0 = 0;
+  card.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+    if (focus) { pause(); } }, { passive: true });
+  card.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > 1.5 * Math.abs(dy) && Date.now() - t0 < 800) move(dx < 0 ? 1 : -1);
+    else if (focus && manual) renderCard();   // a plain tap: show the paused state
+  }, { passive: true });
+  card.addEventListener('wheel', () => { if (focus && !manual) { pause(); renderCard(); } }, { passive: true });
+  // Drag the globe sideways to explore; the nearest hotspot's card follows. Vertical
+  // swipes are left to the page so phones can still scroll past the globe.
+  canvas.style.touchAction = 'pan-y';
+  let drag = null, dragged = false;
+  canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, r: rot.slice() }; dragged = false; });
+  canvas.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!dragged && Math.hypot(dx, dy) < 6) return;
+    if (!dragged) { dragged = true; pause(); tween = null; }
+    const k = 90 / (base * zoom);   // degrees per pixel, roughly
+    rot = [drag.r[0] + dx * k, Math.max(-80, Math.min(80, drag.r[1] - (e.pointerType === 'mouse' ? dy * k : 0)))];
+  });
+  const endDrag = () => {
+    if (drag && dragged) {   // open the card for the hotspot nearest the middle of the view
+      const centre = [-rot[0], -rot[1]];
+      let best = -1, bd = 0.6;   // within about 35 degrees
+      stops.forEach((h, i) => { const d = d3.geoDistance([h.lon, h.lat], centre); if (d < bd) { bd = d; best = i; } });
+      if (best >= 0 && (!focus || stops[best].key !== focus.key)) { slideDir = 0; tourIdx = best; setFocus(stops[best], DWELL, true); }
+      lastTouch = performance.now();
+    }
+    drag = null;
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', () => { drag = null; });
+  canvas.addEventListener('pointerleave', endDrag);
+  canvas.addEventListener('click', e => {   // tap a ring on the globe to open that card
+    if (dragged) { dragged = false; return; }
+    const r = canvas.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    let best = -1, bd = 26 * 26;
+    const centre = [-rot[0], -rot[1]];
+    stops.forEach((h, i) => { if (d3.geoDistance([h.lon, h.lat], centre) > Math.PI / 2 - .03) return; const [x, y] = projection([h.lon, h.lat]); const d = (x - px) ** 2 + (y - py) ** 2; if (d < bd) { bd = d; best = i; } });
+    if (best >= 0) jump(best);
+  });
+  addEventListener('keydown', e => {
+    if (e.target.closest('input, textarea')) return;
+    if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1);
+    else if (e.key === ' ' && focus) { e.preventDefault(); manual ? resume() : (pause(), renderCard()); }
+  });
+})();
+
+/* ---------- Splash: animated wordmark until loading is done ---------- */
+const splash = document.getElementById('splash'), bar = document.getElementById('splashBar'), status = document.getElementById('splashStatus');
+let splashMin = Date.now() + 3500;
+function step(pct, html) { bar.style.width = pct + '%'; status.innerHTML = html; }
+function hideSplash() { splash.classList.add('gone'); setTimeout(() => splash.remove(), 800); }
+splash.addEventListener('click', () => { splashMin = 0; });
+
+(async () => {
+  try {
+    step(15, 'Loading world map');
+    const world = await getJSON('world.json');
+    land = topojson.merge(world, world.objects.countries.geometries);
+    countryFeats = topojson.feature(world, world.objects.countries).features.map(f => Object.assign(f, { c: d3.geoCentroid(f), b: d3.geoBounds(f) }));
+    borders = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
+    resize();
+    step(45, 'Contacting the Tripwire engine');
+    await refresh(); await refreshHealth();
+    const live = document.querySelectorAll('.feed').length;
+    step(80, `<b>${signals.length}</b> signals · <b>${hotspots.length}</b> hotspots · ${live} feeds`);
+    renderCard();
+  } catch (e) {
+    step(100, 'Tripwire engine not responding. Showing what we have');
+  }
+  requestAnimationFrame(frame);
+  setInterval(refresh, 60000); setInterval(refreshHealth, 30000);
+  const wait = Math.max(0, splashMin - Date.now());
+  setTimeout(() => { step(100, status.innerHTML); hideSplash(); }, wait);
+})();
+</script>
+<div class="intro" id="intro" hidden role="dialog" aria-labelledby="introTitle">
+  <div class="intro-card">
+    <h2 id="introTitle">What am I looking at?</h2>
+    <p>Ricochet watches public data for the early echoes of conflict and security incidents: news wires, fire-spotting satellites, internet outages, seismic sensors, aircraft, shipping and Wikipedia edits. Each is compared with what's normal for that place.</p>
+    <ul>
+      <li><b>Rings on the globe</b> are hotspots. <span style="color:var(--c-reported)">Amber = Reported</span>: two or more independent feeds above normal. <span style="color:var(--c-signal)">Grey-blue = Signal</span>: one feed well above normal.</li>
+      <li><b>Cards below</b> explain why each hotspot is there and link to the original reporting. Swipe, use ‹ › or tap a ring. Touching a card pauses the tour.</li>
+      <li><b>Shaded countries</b> have an ongoing or escalating situation in the news.</li>
+      <li><b>Nothing here is confirmed.</b> These are automated tripwires, not verified events. Follow the links to the source.</li>
+    </ul>
+    <label class="intro-check"><input type="checkbox" id="introNever"> Don't show this again</label>
+    <button class="intro-ok" id="introOk">Got it</button>
+  </div>
+</div>
+<script>
+(() => {
+  const box = document.getElementById('intro');
+  let seen = false; try { seen = !!localStorage.getItem('introSeen'); } catch (e) {}
+  if (!seen) setTimeout(() => { box.hidden = false; }, 3800);   // after the splash
+  document.getElementById('introOk').onclick = () => {
+    box.hidden = true;
+    if (document.getElementById('introNever').checked) { try { localStorage.setItem('introSeen', '1'); } catch (e) {} }
+  };
+  window.showIntro = () => { box.hidden = false; };
+})();
+</script>
+</body>
+</html>
