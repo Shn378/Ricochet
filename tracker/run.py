@@ -132,6 +132,13 @@ def housekeeping(con, keep_days):
 def main():
     cfg = load_config()
     con = db.connect()
+    # Open the site first: the start-up below takes a minute, and every deploy restarts the engine
+    port = cfg.getint("general", "port")
+    try:
+        web = serve(port, cfg.get("general", "host"), background=True)
+    except Exception:
+        log(traceback.format_exc())
+        return
     db.rescore_ioda(con)
     db.migrate_v2(con)
     jobs = []
@@ -186,14 +193,11 @@ def main():
     threading.Thread(target=srv.warm, args=(log,), daemon=True, name="warm").start()
     threading.Thread(target=archive.runner, args=(cfg, lambda c: srv.hotspots(c, 6, 200, watch=True), log),
                      daemon=True, name="archive").start()
-    port = cfg.getint("general", "port")
     log(f"Ricochet running (Tripwire engine). Open http://localhost:{port}")
     try:
-        serve(port, cfg.get("general", "host"))
+        web.join()
     except KeyboardInterrupt:
         log("Stopped.")
-    except Exception:
-        log(traceback.format_exc())
 
 
 if __name__ == "__main__":

@@ -349,6 +349,13 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
 
-def serve(port=8765, host="127.0.0.1"):
+def serve(port=8765, host="127.0.0.1", background=False):
+    """Binds straight away (so a busy port fails loudly), then answers requests. In the background
+    it returns the thread, letting the engine open the site before the slow start-up work."""
     Handler.con = db.connect()
-    ThreadingHTTPServer((host, port), Handler).serve_forever()
+    httpd = ThreadingHTTPServer((host, port), Handler)
+    if not background:
+        return httpd.serve_forever()
+    t = threading.Thread(target=httpd.serve_forever, daemon=True, name="web")
+    t.start()
+    return t
