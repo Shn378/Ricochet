@@ -230,6 +230,8 @@ class Handler(SimpleHTTPRequestHandler):
                 res = dict(_situations(self.con))
                 if not q.get("all"):
                     res["countries"] = [c for c in res["countries"] if c["ongoing"]]
+                from . import conflicts
+                res["listed"] = conflicts.for_display()   # hand-kept wars, display only
                 return self._json(res)
             if u.path == "/api/replay" and self._local():
                 import importlib

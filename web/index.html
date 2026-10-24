@@ -248,6 +248,7 @@ body[data-mode="stream"] .phone-only, body[data-mode="stream"] .wall-only { disp
     <span><i class="ring" style="border-color:var(--c-reported)"></i>Reported</span>
     <span><i class="ring" style="border-color:var(--c-signal)"></i>Signal</span>
     <span><i class="sq"></i>Ongoing situation</span>
+    <span><i class="sq" style="background:rgba(217,120,90,.18);border-style:dashed"></i>Armed conflict (hand-kept list)</span>
     <span><i class="ring" style="border-color:var(--c-hazard)"></i>Natural hazard (not security)</span>
     <div class="k2" id="keyFeeds"></div>
   </div>
@@ -488,11 +489,17 @@ function renderCard() {
 
 /* ================= Side panels (shared builders) ================= */
 function situationsHTML(compact) {
-  if (!situations.length) return '<p class="empty">No ongoing or escalating situations in the news right now.</p>';
+  if (!situations.length) return '<p class="empty">No ongoing or escalating situations in the news right now.</p>' + (compact ? '' : listedHTML());
   const [first, ...rest] = situations;
   const top = `<button class="panel" style="text-align:left;border-top:3px solid var(--c-ongoing);display:grid;gap:8px;width:100%" data-stop="c:${esc(first.country)}">${situationCardStatic(first)}</button>`;
   const rows = rest.slice(0, compact ? 3 : 8).map(s => `<button class="sitrow" data-stop="c:${esc(s.country)}"><i></i><b>${esc(s.name)}</b><span class="st">${s.state === 'escalating' ? 'Escalating' : 'Ongoing'}</span><span class="tr">${s.trend === 'rising' ? '↑ rising' : s.trend === 'easing' ? '↓ easing' : '→ steady'}</span></button>`).join('');
-  return top + (rows ? `<div class="panel" style="padding-top:2px;padding-bottom:2px">${rows}</div>` : '');
+  return top + (rows ? `<div class="panel" style="padding-top:2px;padding-bottom:2px">${rows}</div>` : '') + (compact ? '' : listedHTML());
+}
+function listedHTML() {
+  const sitFeats = new Set(situations.map(featureFor).filter(Boolean));
+  const names = [...new Set(listed.filter(c => c.box || !sitFeats.has(featureFor(c))).map(c => c.name.replace(/ \(.*\)$/, '')))];
+  if (!names.length) return '';
+  return `<div class="panel" style="display:grid;gap:8px"><div class="label">Armed conflicts · hand-kept list</div><div class="chips">${names.map(n => `<span class="fchip" style="cursor:default"><i style="background:transparent;border:1.5px dashed var(--c-ongoing)"></i>${esc(n)}</span>`).join('')}</div><p class="note">Wars we track whatever the news volume says, so a big story elsewhere doesn't hide them. Kept by hand, reviewed daily.</p></div>`;
 }
 function situationCardStatic(s) {
   const esc8 = s.state === 'escalating';
@@ -701,6 +708,14 @@ function draw(t) {
   ctx.beginPath(); path({ type: 'Sphere' }); ctx.fillStyle = g; ctx.fill();
   ctx.beginPath(); path(graticule); ctx.strokeStyle = 'rgba(135,150,166,.09)'; ctx.lineWidth = .6; ctx.stroke();
   ctx.beginPath(); path(land); ctx.fillStyle = PAL.land; ctx.fill();
+  const sitFeats = new Set(situations.map(featureFor).filter(Boolean));
+  ctx.setLineDash([4, 3]);
+  for (const c of listed) {   // hand-kept wars: shown whatever the news volume says (display only)
+    const g = c.box ? (c._g || (c._g = d3.geoGraticule().extent([[c.box[2], c.box[0]], [c.box[3], c.box[1]]]).outline())) : featureFor(c);
+    if (!g || sitFeats.has(g)) continue;
+    ctx.beginPath(); path(g); ctx.fillStyle = 'rgba(217,120,90,.16)'; ctx.fill(); ctx.strokeStyle = 'rgba(217,120,90,.75)'; ctx.lineWidth = .9; ctx.stroke();
+  }
+  ctx.setLineDash([]);
   for (const s of situations) { const f = featureFor(s); if (!f) continue; const on = focus && focus.key === 'c:' + s.country;
     ctx.beginPath(); path(f); ctx.fillStyle = on ? 'rgba(217,120,90,.55)' : 'rgba(217,120,90,.38)'; ctx.fill(); ctx.strokeStyle = PAL.ongoing; ctx.lineWidth = on ? 1.6 : .8; ctx.stroke(); }
   ctx.beginPath(); path(borders); ctx.strokeStyle = PAL.border; ctx.lineWidth = .5; ctx.stroke();

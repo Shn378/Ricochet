@@ -7,7 +7,8 @@ This short hand-kept list fills the gap. Each entry is a country, optionally lim
 to a box, so listing Russia's border regions doesn't make Siberian wildfires count.
 
 Kept small and reviewed by the audit. Sources: ACLED Conflict Index, Wikipedia
-"List of ongoing armed conflicts". Used only when rules.FLAGS["listed_conflicts"] is on.
+"List of ongoing armed conflicts". In the rules only when rules.FLAGS["listed_conflicts"] is on;
+always shown on the globe as its own "Armed conflict" layer (display only, since 24 Oct).
 """
 
 # (name, ISO2, box (lat_min, lat_max, lon_min, lon_max) or None for the whole country)
@@ -57,3 +58,21 @@ def listed_near(cell):
         hit.add(name)
     _cache[cell] = hit
     return hit
+
+
+def for_display():
+    """The list for the globe's "Armed conflict" layer: one entry per line, with a point to place it
+    (the box's centre, or the country's centre) and the box for drawing."""
+    from .places import country_centre, COUNTRIES
+    out = []
+    for name, iso, box in LISTED:
+        if box:
+            lat, lon = (box[0] + box[1]) / 2, (box[2] + box[3]) / 2
+        else:
+            c = country_centre(iso)
+            if not c:
+                continue
+            lat, lon = c[0], c[1]
+        out.append({"name": name, "iso": iso, "country": COUNTRIES.get(iso, {}).get("name", iso),
+                    "lat": lat, "lon": lon, "box": list(box) if box else None})
+    return out
