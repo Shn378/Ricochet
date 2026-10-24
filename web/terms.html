@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Ricochet: terms, data and privacy</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+/* DRAFT for Shane and a solicitor to check (24 Oct 2026). Not linked from the site yet. */
+:root { color-scheme: dark; --bg: #0b1118; --panel: #111a24; --line: #233243; --fg: #dfe7ee; --muted: #8796a6; --accent: #e9b44c; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 "IBM Plex Sans", system-ui, "Segoe UI", sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font: 700 40px/1.1 "Barlow Condensed", "Arial Narrow", sans-serif; letter-spacing: .02em; margin: 0 0 6px; }
+h2 { font: 600 24px/1.2 "Barlow Condensed", "Arial Narrow", sans-serif; margin: 32px 0 8px; }
+p, li { margin: 0 0 10px; }
+.muted { color: var(--muted); font-size: 14px; }
+.draft { border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 10px 14px; font-size: 14px; margin: 16px 0 24px; }
+a { color: var(--fg); text-underline-offset: 2px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; }
+</style>
+</head>
+<body>
+<main>
+<h1>Terms, data and privacy</h1>
+<p class="muted">Ricochet, powered by the Tripwire engine · ricochet.watch</p>
+<p class="draft">Draft for review, not yet in force. To be checked by a solicitor before it's linked from the site.</p>
+
+<h2>What Ricochet is</h2>
+<p>Ricochet watches public data (news reports, satellite fire detections, internet outages, seismic sensors, aircraft, shipping and Wikipedia activity) and highlights places where it's running well above normal. It's an automated early-warning aid that points you to the original reporting. It is not a news service and doesn't verify events.</p>
+
+<h2>Please don't rely on it for safety</h2>
+<ul>
+  <li><b>Nothing on Ricochet is confirmed</b> unless a card says so, and then only because an official statement or two independent sources say so. Follow the links and read the original reporting.</li>
+  <li><b>Not for life-safety decisions.</b> In an emergency, follow official warnings and the emergency services where you are. Ricochet can be late, wrong or offline.</li>
+  <li><b>Outages and fires have many causes.</b> An internet outage or a fire near a site is shown as a signal with its cause not confirmed. We never label one an attack ourselves.</li>
+  <li>Data comes "as is" from the sources below, with their own gaps and errors. Some sources ask that their data isn't used for tactical decisions or local-scale conditions (NASA's <a href="https://www.earthdata.nasa.gov/data/projects/lance#ed-lance-disclaimer" target="_blank" rel="noopener">LANCE disclaimer</a> for fire data), and we pass that on.</li>
+</ul>
+
+<h2>Using what you see here</h2>
+<p>You're welcome to look, share links and quote cards with a link back. Please don't scrape the site or the API in bulk, resell it, or present it as verified fact. Each source keeps its own licence (below); some don't allow commercial use.</p>
+
+<h2>Where the data comes from</h2>
+<table>
+  <tr><th>Source</th><th>What we use</th><th>Licence</th></tr>
+  <tr><td><a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">The GDELT Project</a></td><td>Worldwide news coding</td><td>Free for any use, with citation</td></tr>
+  <tr><td><a href="https://firms.modaps.eosdis.nasa.gov/" target="_blank" rel="noopener">NASA FIRMS</a></td><td>Satellite fire detections</td><td>NASA open data (LANCE/ESDIS)</td></tr>
+  <tr><td><a href="https://ioda.inetintel.cc.gatech.edu/" target="_blank" rel="noopener">IODA</a> (Georgia Tech)</td><td>Internet outages</td><td>Per IODA's terms</td></tr>
+  <tr><td><a href="https://radar.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Radar</a></td><td>Outages and traffic anomalies</td><td>CC BY-NC 4.0</td></tr>
+  <tr><td><a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi</a></td><td>Aircraft positions</td><td>Personal, non-commercial use</td></tr>
+  <tr><td><a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a></td><td>Ship positions at chokepoints</td><td>Per aisstream.io</td></tr>
+  <tr><td><a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a></td><td>Earthquakes and blasts</td><td>US public domain</td></tr>
+  <tr><td><a href="https://www.gdacs.org/" target="_blank" rel="noopener">GDACS</a></td><td>Disaster alerts</td><td>CC BY 4.0</td></tr>
+  <tr><td><a href="https://www.tsunami.gov/" target="_blank" rel="noopener">NOAA tsunami centres</a></td><td>Tsunami messages</td><td>US public domain</td></tr>
+  <tr><td><a href="https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings" target="_blank" rel="noopener">Met Office</a></td><td>UK weather warnings (context only)</td><td>Crown copyright</td></tr>
+  <tr><td><a href="https://www.wikimedia.org/" target="_blank" rel="noopener">Wikimedia</a></td><td>Counts of edits to articles</td><td>Wikimedia terms</td></tr>
+  <tr><td><a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>, <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a></td><td>Place names, sensitive sites</td><td>CC BY 4.0, CC0</td></tr>
+  <tr><td>News outlets</td><td>Headlines and links only, always linked to the original</td><td>Each outlet's own terms</td></tr>
+</table>
+
+<h2>Privacy</h2>
+<ul>
+  <li>No accounts, no adverts, no tracking cookies.</li>
+  <li>Your browser stores one setting on your device (whether you've seen the "What am I looking at?" box). It never leaves your device.</li>
+  <li>The site runs through Cloudflare, which processes visitors' IP addresses to deliver and protect it. Fonts load from Google Fonts, which sees your IP address when it sends them.</li>
+  <li>The server keeps standard short-term technical logs to keep the service running.</li>
+</ul>
+
+<h2>Contact</h2>
+<p>Corrections, takedown requests or a source asking us to stop reading it: <span class="muted">[contact address to add]</span>. We'll act on a source's request straight away.</p>
+
+<p class="muted">Last updated: draft, 24 October 2026.</p>
+</main>
+</body>
+</html>
