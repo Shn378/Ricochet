@@ -108,7 +108,8 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
 - `tracker/audit.py`: daily 04:xx UTC feed/collector health at `/api/audit`; auto-retires feeds refusing
   us (403/429) for 3+ days via `data/auto_retired.json` and lists them under `for_claude` to drop from backbone.json.
 - `tracker/threat_levels.json`: hand-kept national threat levels on country cards (audit re-checks daily).
-- `tracker/conflicts.py`: hand-kept list of armed conflicts (optionally boxed), for `listed_conflicts`.
+- `tracker/conflicts.py`: hand-kept list of armed conflicts (optionally boxed), for `listed_conflicts` (off) and
+  the globe's dashed "Armed conflict" layer (display only, via `/api/situations` `listed`).
 - `tracker/places.py` + `gazetteer.json.gz`: placing stories (GeoNames ≥15k, demonyms, leaders). Order: town >
   named facility/sea (`named_places.json`, placement only) > country. "Where" beats "who": a place named after
   in/on/off wins; "Russian drones" is an actor (a national feed keeps its own country); "Australian MP" is a location.

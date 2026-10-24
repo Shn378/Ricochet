@@ -47,8 +47,8 @@ Done 24 Oct (Sat morning, Shane at the laptop):
 - Gemini = on-demand helper (GEMINI.md, docs/gemini-jobs.md). BigQuery client (tracker/bq.py) waiting on the key.
 - Licence audit (docs/licences.md); draft terms page (web/terms.html, unlinked); FIRMS disclaimer linked.
 - Found: Haiti never qualifies as Ongoing (<400 GDELT events/week) and Ukraine isn't Ongoing either (huge
-  general coverage dilutes its conflict share to 1.16x world). Proposal: show the hand-kept conflicts list
-  (conflicts.py) as its own "Armed conflict" layer on the globe, display only (rules unchanged).
+  general coverage dilutes its conflict share to 1.16x world). Done (Shane approved 24 Oct): the hand-kept
+  conflicts list (conflicts.py) shows as its own dashed "Armed conflict" layer on the globe, display only.
 
 Proposals from the 24 Oct audit (Shane to decide):
 - US/Canada state- or county-level GDELT stories can't open a hotspot alone (12 of 24 noise hotspots).
