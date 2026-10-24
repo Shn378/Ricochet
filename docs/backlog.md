@@ -44,7 +44,11 @@ Done 24 Oct (Sat morning, Shane at the laptop):
 - News items stamped before our last good read are dated to that read (UP EN's early stamps).
 - Audit task instructions updated (reads /api/audit + /api/benchmark, threat levels, adds incidents to the repo).
   Shane to attach Shn378/Ricochet to the "Nightly Audit Report" task and delete the old disabled "Nightly Audit".
-- Gemini = on-demand helper (GEMINI.md, docs/gemini-jobs.md). BigQuery client (tracker/bq.py) waiting on the key.
+- Gemini = on-demand helper (GEMINI.md, docs/gemini-jobs.md).
+- BigQuery live 24 Oct (ricochet-bq-read, key on the VM; a day of GDELT conflict events = 116 MB of the free
+  1 TiB/month). R2 archive working since the [r2] fix (digests 19-23 Oct uploaded 09:15 UTC).
+- Tests now delete their temp folders (/tmp is RAM on the VM). Shane to `rm ~/move.tgz` once happy (old VM
+  move bundle, likely holds old secrets); delete the stopped London VM after ~30 Oct.
 - Licence audit (docs/licences.md); draft terms page (web/terms.html, unlinked); FIRMS disclaimer linked.
 - Found: Haiti never qualifies as Ongoing (<400 GDELT events/week) and Ukraine isn't Ongoing either (huge
   general coverage dilutes its conflict share to 1.16x world). Done (Shane approved 24 Oct): the hand-kept
@@ -63,9 +67,8 @@ Next, in order:
 2. Read the benchmark: switch on (FLAGS default True) any flag with hits gained and zero extra
    openings; take trade-offs to Shane with the extra-opening examples. Sanity-check the extra
    openings by eye; the noise pass treats every new opening as a possible false alarm.
-3. Check the first R2 upload in the log (`grep archive`).
-4. BigQuery read-only key (walk Shane through the console: service account with BigQuery Job User
-   + Data Viewer, JSON key into config.ini on the VM) for older GDELT replays and baselines.
+3. ~~Check the first R2 upload~~ done 24 Oct.
+4. ~~BigQuery read-only key~~ done 24 Oct.
 5. Gemini: decided 24 Oct (Shane) as an on-demand helper for data crunching and repetitive jobs, not a
    scheduled audit. Repo access, branch + pull request only; job prompts in docs/gemini-jobs.md.
 6. Deterministic half of the audit as `audit.py` on the VM (feed health, auto-retire 3-day 403s).
