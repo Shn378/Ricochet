@@ -166,7 +166,7 @@ body[data-mode="wall"], body[data-mode="stream"] { height: 100vh; overflow: hidd
 /* Wall and stream are laid out once at 1920x1080 and scaled to fit the screen (TV browsers report odd sizes) */
 .stage { position: fixed; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; font-size: 16px; }
 body[data-mode="wall"] .phone-only, body[data-mode="wall"] .stream-only { display: none !important; }
-.wall { height: 1080px; display: grid; grid-template-rows: auto minmax(0, 1fr) 248px auto; gap: 14px; padding: 16px 24px 10px; }
+.wall { height: 1080px; display: grid; grid-template-rows: auto minmax(0, 1fr) 248px auto; gap: 14px; padding: 28px 48px 30px; }   /* clear of TV overscan */
 .w-top { display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
 .w-top .brand { font-size: 34px; }
 .w-top .tag { font: 14px var(--f-mono); color: var(--muted); }
@@ -185,11 +185,11 @@ body[data-mode="wall"] .phone-only, body[data-mode="wall"] .stream-only { displa
 .w-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; min-height: 0; }
 .w-bottom .panel { overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
 .w-foot { display: flex; justify-content: space-between; gap: 20px; font: 12px var(--f-mono); color: var(--muted); }
+.w-foot .credits { min-width: 0; }
+.w-foot > span:last-child { flex: none; white-space: nowrap; }
 body[data-mode="wall"] .card { overflow: hidden; display: flex; flex-direction: column; gap: 10px; border-top: 3px solid var(--accent); }
 body[data-mode="wall"] .card h2 { font-size: 54px; }
 body[data-mode="wall"] .sig { font-size: 16px; grid-template-columns: 60px 10px 1fr; }
-body[data-mode="wall"] .key { bottom: auto; top: 0; left: 0; }
-body[data-mode="wall"] .key-btn { display: none; }
 body[data-mode="wall"] .hz-badge { display: none; }
 
 /* ================= STREAM ================= */
@@ -762,7 +762,6 @@ function frame(now) {
 
 /* ================= Input ================= */
 $('keyBtn').onclick = () => { const o = $('key').hidden; $('key').hidden = !o; $('keyBtn').setAttribute('aria-expanded', o); };
-if (MODE === 'wall') { $('key').hidden = false; }
 addEventListener('keydown', e => {
   if (e.target.closest('input, textarea')) return;
   if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1);
