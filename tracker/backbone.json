@@ -221,7 +221,7 @@
   },
   {
    "name": "Sahel Intelligence",
-   "url": "https://sahel-intelligence.com/feed/",
+   "url": "https://sahel-intelligence.com/feed",
    "country": null
   },
   {
@@ -259,6 +259,20 @@
    "url": "https://www.gov.uk/government/organisations/ministry-of-defence.atom",
    "country": "GB",
    "type": "official"
+  },
+  {
+   "name": "Arab News",
+   "url": "https://www.arabnews.com/rss.xml",
+   "country": "SA",
+   "lang": "en",
+   "probation": true
+  },
+  {
+   "name": "LBCI",
+   "url": "https://www.lbcgroup.tv/Rss/News/en",
+   "country": "LB",
+   "lang": "en",
+   "probation": true
   }
  ]
 }

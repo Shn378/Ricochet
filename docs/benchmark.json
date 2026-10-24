@@ -2,6 +2,190 @@
  "note": "Benchmark incidents from the morning audits. Times UTC. Add every truth-list incident; never remove one. start/end = when it happened (or was first reported, for delayed tolls); first_report = earliest public report found.",
  "incidents": [
   {
+   "id": "moldova-23",
+   "name": "Russian drone crashes near homes and an energy site (Moldova, place not traced)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     47.0,
+     28.9
+    ]
+   ],
+   "start": "2026-10-23T15:00",
+   "end": "2026-10-23T18:30",
+   "first_report": "2026-10-23T18:17",
+   "type": "military"
+  },
+  {
+   "id": "najran-23",
+   "name": "Houthi ballistic missile at Najran intercepted",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     17.49,
+     44.13
+    ]
+   ],
+   "start": "2026-10-23T20:30",
+   "end": "2026-10-23T21:00",
+   "first_report": "2026-10-23T20:52",
+   "type": "military"
+  },
+  {
+   "id": "nairobi-23",
+   "name": "18-storey building collapses, 7 missing (Eastleigh, Nairobi); first Kenyan report untraced",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     -1.27,
+     36.85
+    ]
+   ],
+   "start": "2026-10-23T09:45",
+   "end": "2026-10-23T10:30",
+   "first_report": null,
+   "type": "industrial"
+  },
+  {
+   "id": "khoryv-23",
+   "name": "Bulk carrier Khoryv hit by drone and sinks, 1 dead, 3 missing (13 nm off Constanta)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     44.1,
+     28.95
+    ]
+   ],
+   "start": "2026-10-23T06:00",
+   "end": "2026-10-23T07:30",
+   "first_report": "2026-10-23T09:09",
+   "type": "strike"
+  },
+  {
+   "id": "tunisia-23",
+   "name": "Police clash with protesters (Tunis and Sfax)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     36.8,
+     10.18
+    ],
+    [
+     34.74,
+     10.76
+    ]
+   ],
+   "start": "2026-10-22T18:00",
+   "end": "2026-10-23T23:00",
+   "first_report": "2026-10-22T23:10",
+   "type": "unrest"
+  },
+  {
+   "id": "champi-23",
+   "name": "Typhoon Champi, 1 killed, 163 injured (Taiwan); GDACS red 03:00 after days of forecasts",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     24.0,
+     121.0
+    ]
+   ],
+   "start": "2026-10-23T00:00",
+   "end": "2026-10-23T23:59",
+   "first_report": "2026-10-23T03:00",
+   "type": "disaster"
+  },
+  {
+   "id": "chernihiv-23",
+   "name": "Strike on businesses, 1 killed, 16-25 injured (Chernihiv); first report is a UP (EN) stamp, which runs early",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     51.5,
+     31.29
+    ]
+   ],
+   "start": "2026-10-23T06:00",
+   "end": "2026-10-23T11:00",
+   "first_report": "2026-10-23T11:53",
+   "type": "strike"
+  },
+  {
+   "id": "sumy-23",
+   "name": "Overnight drone attack, injuries, gas station and university hit (Sumy)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     50.91,
+     34.8
+    ]
+   ],
+   "start": "2026-10-22T21:00",
+   "end": "2026-10-23T03:00",
+   "first_report": "2026-10-23T00:20",
+   "type": "strike"
+  },
+  {
+   "id": "gaza-23",
+   "name": "Israeli drone strike, 2 killed (Gaza City)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     31.52,
+     34.45
+    ]
+   ],
+   "start": "2026-10-23T11:00",
+   "end": "2026-10-23T12:15",
+   "first_report": "2026-10-23T12:12",
+   "type": "strike"
+  },
+  {
+   "id": "trappes-23",
+   "name": "Drive-by shootings, 1 killed, 4-5 injured (Trappes and La Verriere)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     48.78,
+     1.99
+    ]
+   ],
+   "start": "2026-10-23T08:30",
+   "end": "2026-10-23T10:00",
+   "first_report": "2026-10-23T09:57",
+   "type": "killing"
+  },
+  {
+   "id": "hebron-23",
+   "name": "Judea Junction shooting, 2 soldiers and 2 gunmen killed (Route 35 near Hebron)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     31.53,
+     35.1
+    ]
+   ],
+   "start": "2026-10-23T04:00",
+   "end": "2026-10-23T05:00",
+   "first_report": "2026-10-23T04:31",
+   "type": "killing"
+  },
+  {
+   "id": "karak-23",
+   "name": "Gunmen attack church funeral, 7 killed, 40 wounded (Hammoud, Karak)",
+   "audit": "2026-10-24",
+   "points": [
+    [
+     31.29,
+     35.8
+    ]
+   ],
+   "start": "2026-10-23T11:45",
+   "end": "2026-10-23T12:30",
+   "first_report": "2026-10-23T12:14",
+   "type": "killing"
+  },
+  {
    "id": "kyiv-highrise-21",
    "name": "Kyiv high-rise drone strike, 1 killed",
    "audit": "2026-10-22",

@@ -79,7 +79,7 @@ Stdlib-only Python, SQLite (WAL), D3 orthographic globe on canvas (`web/index.ht
     shown in lime, never counted. GOV.UK alerts parser written but not polled: placement not good enough)
   - `news` (RSS/Atom via the attention budget)
 - `tracker/attention.py`: news "attention budget": 30 checks/min shared by heat.
-  Backbone in `tracker/backbone.json` (46 feeds; Al Arabiya EN retired 22 Oct after 403s on probation). Layer 2 backbone, 3 leased (not built),
+  Backbone in `tracker/backbone.json` (48 feeds incl. Arab News + LBCI on probation from 24 Oct; Al Arabiya EN retired 22 Oct after 403s on probation). Layer 2 backbone, 3 leased (not built),
   4 earned (not built), **5 probation** (`"probation": true`: shown on cards/map, tallied,
   never counts towards a hotspot). Feeds removed from the JSON are marked retired.
 - `tracker/baseline.py`: hourly buckets per 1° cell; same-hours-of-day expectations;

@@ -36,6 +36,13 @@ Done 24 Oct (00:00-01:00):
 - New `hazards` collector (GDACS red/orange, NOAA PTWC/NTWC): context only until Shane decides
   whether GDACS red / tsunami warnings can open a hotspot. GOV.UK alerts parked: needs alert-area shapes.
 
+Proposals from the 24 Oct audit (Shane to decide):
+- US/Canada state- or county-level GDELT stories can't open a hotspot alone (12 of 24 noise hotspots).
+- Place stories at ports, sites and offshore points, not country centres (Khoryv off Constanta sat at Romania's centre).
+- Ukrainska Pravda (UA edition) + Kyiv Independent on probation. Also seen: UP (EN) stamps articles with the
+  Ukrainian original's time, so arrivals run up to 5 h behind the stamp; and the Moldova miss ("drone crashed"
+  not an incident word; "Russian" placed it in Russia).
+
 Next, in order:
 1. Check `/api/health` (all feeds back after the move) and `/api/benchmark`. If the benchmark
    errors, ask Shane for `journalctl -u ricochet --since -1h | grep -i bench`.
@@ -50,8 +57,8 @@ Next, in order:
 6. Deterministic half of the audit as `audit.py` on the VM (feed health, auto-retire 3-day 403s).
 7. Quick-win sources: GDACS + NOAA tsunami done (context); GOV.UK alerts (placement), threat levels, Met Office context still to do.
 8. UI build (three modes, docs/ui) — biggest chunk; may slip to next weekend.
-Also pending: add the 23 Oct audit's incidents to docs/benchmark.json (Shane to paste the report);
-Arab News + LBCI on probation once the audit gives confirmed feed URLs; uptime alert in Cloud
+Done 24 Oct (from the 24 Oct audit): Sahel Intelligence moved to /feed (no slash); Arab News + LBCI on
+probation; 12 incidents from 23 Oct added to docs/benchmark.json (38 total). Still pending: uptime alert in Cloud
 Monitoring; site-name placement for stories (Shaybah miss) is not built yet.
 
 Moved out of CLAUDE.md on 23 Oct to keep every session's context small. Read when planning work.
